@@ -96,6 +96,7 @@ class Trainer:
             if optimizer is not None:
                 optimizer.zero_grad()
                 loss.backward()
+                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
             return loss
 
@@ -145,7 +146,7 @@ class Trainer:
             
             self.optimizermixer.zero_grad()
             for p, g in zip(self.contextmixer.parameters(), hgrads):
-                hypergrad = torch.clamp(g, -5.0, 5.0)
+                hypergrad = torch.clamp(g, 5.0, 5.0)
                 hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
                 p.grad = hypergrad
             self.optimizermixer.step()
@@ -193,6 +194,10 @@ class Trainer:
         
         #Run model on test set.
         print('{} {} {}'.format(self.args.dataset, self.args.split_type, self.args.fingerprint))
+        
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        print('(Last Model) Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
+
         self.model.load_state_dict(self.best_auc_valid_state_dict_model)
         self.contextmixer.load_state_dict(self.best_auc_valid_state_dict_contextmixer)
         tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
