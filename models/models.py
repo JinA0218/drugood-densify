@@ -20,7 +20,9 @@ def get_model(args):
                 num_outputs=args.num_outputs, \
                 dropout=args.dropout, \
                 batchnorm=args.batchnorm)
-        #initialize_weights(model=model)
+
+        if args.initialize_weights:
+            initialize_weights(model=model)
     else:
         raise NotImplementedError
     

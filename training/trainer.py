@@ -100,10 +100,21 @@ class Trainer:
             return loss
 
         #Gradient-Based Hyperparamter optimization algorithm.
-        best_vnll = 1e3
+        best_vauc = 0.0
         episodes_without_improvement = 0
-        best_valid_state_dict_model = deepcopy(self.model.state_dict())
-        best_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+        self.best_auc_valid_state_dict_model = deepcopy(self.model.state_dict())
+        self.best_auc_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+
+        best_vbrier = float('inf')
+        episodes_without_improvement = 0
+        self.best_brier_valid_state_dict_model = deepcopy(self.model.state_dict())
+        self.best_brier_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+        
+        best_vnll = float('inf')
+        episodes_without_improvement = 0
+        self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
+        self.best_nll_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+
         trainloader = InfIterator(self.trainloader)
         validloader = InfIterator(self.validloader)
        
@@ -145,20 +156,28 @@ class Trainer:
             print('Episode: {:<3} tloss: {:.3f} vnll: {:.3f} vauc: {:.3f} vbrier: {:.3f}'.format(\
                         episode, np.mean(tlosses), vnll, vauc, vbrier))
             
-            if vnll < best_vnll:
-                best_vnll = vauc
+            if vauc > best_vauc:
+                best_vauc = vauc
                 episodes_without_improvement = 0
-                best_valid_state_dict_model = deepcopy(self.model.state_dict())
-                best_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+                self.best_auc_valid_state_dict_model = deepcopy(self.model.state_dict())
+                self.best_auc_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
             else:
                 episodes_without_improvement += 1
                 if episodes_without_improvement == self.args.early_stopping_episodes:
                     break
+
+            if vbrier < best_vbrier:
+                best_vbrier = vbrier
+                episodes_without_improvement = 0
+                self.best_brier_valid_state_dict_model = deepcopy(self.model.state_dict())
+                self.best_brier_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
             
-        #Run model on test set.
-        #self.model.load_state_dict(best_valid_state_dict_model)
-        #self.contextmixer.load_state_dict(best_valid_state_dict_contextmixer)
-        
+            if vnll < best_vnll:
+                best_vnll = vnll
+                episodes_without_improvement = 0
+                self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
+                self.best_nll_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+         
     def fit(self):
         if self.contextmixer is None:
             self.tlosses, self.vnlls, self.vaucs, self.vbriers, self.tnlls, self.taucs, self.tbriers = [], [], [], [], [], [], []
@@ -171,8 +190,20 @@ class Trainer:
                 self.vnlls.append(vnll); self.vaucs.append(vauc), self.vbriers.append(vbrier)
         else:
             self.train_contextmixer()
-
-        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        
+        #Run model on test set.
         print('{} {} {}'.format(self.args.dataset, self.args.split_type, self.args.fingerprint))
-        print('Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
-        #self.tnlls.append(tnll), self.taucs.append(tauc), self.tbriers.append(tbrier)
+        self.model.load_state_dict(self.best_auc_valid_state_dict_model)
+        self.contextmixer.load_state_dict(self.best_auc_valid_state_dict_contextmixer)
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        print('(Best AUC)   Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
+        
+        self.model.load_state_dict(self.best_brier_valid_state_dict_model)
+        self.contextmixer.load_state_dict(self.best_brier_valid_state_dict_contextmixer)
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        print('(Best BRIER) Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
+
+        self.model.load_state_dict(self.best_nll_valid_state_dict_model)
+        self.contextmixer.load_state_dict(self.best_nll_valid_state_dict_contextmixer)
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        print('(Best NLL)   Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))

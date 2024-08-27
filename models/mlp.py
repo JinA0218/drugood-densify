@@ -20,8 +20,8 @@ class MLP(nn.Module):
             if self.batchnorm:
                 self.mlp.append(nn.BatchNorm1d(num_features=hidden_dim))
             self.mlp.append(nn.ReLU(inplace=True))
-        #if  self.dropout > 0.0:
-        #    self.mlp.append(nn.Dropout(p=self.dropout))
+        if  self.dropout > 0.0:
+            self.mlp.append(nn.Dropout(p=self.dropout))
         self.mlp = nn.Sequential(*self.mlp)
         self.head = nn.Linear(in_features=hidden_dim, out_features=num_outputs)
 
