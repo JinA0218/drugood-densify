@@ -1,6 +1,6 @@
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python training/train.py \
   --contextmixer True \
-  --optimizer adamw \
+  --optimizer adamwschedulefree \
   --split spectral \
   --seed 42 \
   --lr 1e-2 \
