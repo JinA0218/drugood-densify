@@ -41,7 +41,6 @@ class Trainer:
 
     def test(self, dataloader, contextmixer=None):
         self.model.eval()
-        #self.model.train()
         self.optimizer.eval()
         if contextmixer is not None:
             contextmixer.eval()
@@ -105,7 +104,7 @@ class Trainer:
             if optimizer is not None:
                 optimizer.zero_grad()
                 loss.backward()
-                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
             return loss
 
