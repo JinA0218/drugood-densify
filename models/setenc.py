@@ -67,7 +67,8 @@ class MAB(nn.Module):
         V_ = torch.cat(V.split(dim_split, 2), 0)
 
         #A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V), 2)
-        A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(dim_split), 2)
+        A = torch.sigmoid(Q_.bmm(K_.transpose(1,2))/math.sqrt(self.dim_V))
+        #A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(dim_split), 2)
         O = torch.cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
         O = O if getattr(self, 'ln0', None) is None else self.ln0(O)
         O = O + F.relu(self.fc_o(O))
@@ -107,8 +108,9 @@ class PMA(nn.Module):
         return self.mab(self.S.repeat(X.size(0), 1, 1), X)
 
 class STEncoder(nn.Module):
-    def __init__(self, dim_in, dim_hidden, num_inds=16, num_heads=4, num_outputs=4, ln=False):
+    def __init__(self, dim_in, dim_hidden, num_inds=16, num_heads=4, num_outputs=1, ln=False):
         super(STEncoder, self).__init__()
+        ln = False
         self.encoder = nn.Sequential(
                 #SAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
                 #SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
@@ -120,7 +122,7 @@ class STEncoder(nn.Module):
     def forward(self, X):
         X = self.encoder(X)
         return X.sum(dim=1)
-        #return self.encoder(X)
+        #return self.encoder(X).squeeze(1)
 
 class DSEncoder(nn.Module):
     def __init__(self, dim_in, dim_hidden, num_inds=16, num_heads=4, num_outputs=1, ln=True):
