@@ -30,6 +30,7 @@ class Trainer:
     def train(self):
         losses = []
         self.model.train()
+        self.optimizer.train()
         for x,y in self.trainloader:
             y_hat = self.model(x=x.to(self.args.device))
             loss = F.cross_entropy(y_hat, y.to(self.args.device))
@@ -40,6 +41,11 @@ class Trainer:
 
     def test(self, dataloader, contextmixer=None):
         self.model.eval()
+        #self.model.train()
+        self.optimizer.eval()
+        if contextmixer is not None:
+            contextmixer.eval()
+        
         with torch.no_grad():
             preds, labels = [], []
             for x, y in dataloader:
@@ -49,6 +55,7 @@ class Trainer:
                 labels.append(y)
             preds = torch.cat(preds, dim=0)
             labels = torch.cat(labels, dim=0)
+        #self.model.eval()
         nll = log_loss(y_true=labels.cpu(), y_pred=preds.cpu())
         preds = preds.cpu().numpy().tolist()
         labels = labels.bool().cpu().numpy().tolist()
@@ -80,6 +87,8 @@ class Trainer:
             
         def train_mixer(model, optimizer, contextmixer, x, y, context, device, interp_loss=False):
             model.train(); contextmixer.train()
+            if optimizer is not None:
+                optimizer.train()
             
             train_loss, train_acc = 0.0, 0.0
 
@@ -119,6 +128,7 @@ class Trainer:
         trainloader = InfIterator(self.trainloader)
         validloader = InfIterator(self.validloader)
        
+        self.optimizermixer.train()
         for episode in tqdm(range(self.args.outer_episodes), ncols=75, leave=False):
             tlosses = []
             for k in tqdm(range(self.args.inner_episodes), ncols=75, leave=False):
@@ -134,7 +144,7 @@ class Trainer:
             context_t = self.contextloader[torch.randperm(len(self.contextloader))[0]]
             L_T = train_mixer(model=self.model, optimizer=None, contextmixer=self.contextmixer, x=x_t, y=y_t, \
                     context=context_t, device=self.args.device)
-            
+        
             self.model.eval(); self.contextmixer.eval()
             x_v, y_v = next(validloader) #self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
             context_v = None #self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
@@ -182,6 +192,16 @@ class Trainer:
     def fit(self):
         if self.contextmixer is None:
             self.tlosses, self.vnlls, self.vaucs, self.vbriers, self.tnlls, self.taucs, self.tbriers = [], [], [], [], [], [], []
+            
+            best_vauc = 0.0
+            self.best_auc_valid_state_dict_model = deepcopy(self.model.state_dict())
+
+            best_vbrier = float('inf')
+            self.best_brier_valid_state_dict_model = deepcopy(self.model.state_dict())
+            
+            best_vnll = float('inf')
+            self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
+
             for epoch in tqdm(range(self.args.epochs), total=self.args.epochs, ncols=75):
                 tloss= self.train()
                 vnll, vauc, vbrier = self.test(dataloader=self.validloader)
@@ -189,6 +209,25 @@ class Trainer:
                         epoch, tloss, vnll, vauc, vbrier))
                 self.tlosses.append(tloss)
                 self.vnlls.append(vnll); self.vaucs.append(vauc), self.vbriers.append(vbrier)
+
+                if vauc > best_vauc:
+                    best_vauc = vauc
+                    episodes_without_improvement = 0
+                    self.best_auc_valid_state_dict_model = deepcopy(self.model.state_dict())
+                else:
+                    episodes_without_improvement += 1
+                    if episodes_without_improvement == self.args.early_stopping_episodes:
+                        break
+
+                if vbrier < best_vbrier:
+                    best_vbrier = vbrier
+                    episodes_without_improvement = 0
+                    self.best_brier_valid_state_dict_model = deepcopy(self.model.state_dict())
+                
+                if vnll < best_vnll:
+                    best_vnll = vnll
+                    episodes_without_improvement = 0
+                    self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
         else:
             self.train_contextmixer()
         
@@ -199,16 +238,19 @@ class Trainer:
         print('(Last Model) Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
 
         self.model.load_state_dict(self.best_auc_valid_state_dict_model)
-        self.contextmixer.load_state_dict(self.best_auc_valid_state_dict_contextmixer)
+        if self.contextmixer is not None: 
+            self.contextmixer.load_state_dict(self.best_auc_valid_state_dict_contextmixer)
         tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
         print('(Best AUC)   Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
         
         self.model.load_state_dict(self.best_brier_valid_state_dict_model)
-        self.contextmixer.load_state_dict(self.best_brier_valid_state_dict_contextmixer)
+        if self.contextmixer is not None: 
+            self.contextmixer.load_state_dict(self.best_brier_valid_state_dict_contextmixer)
         tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
         print('(Best BRIER) Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
 
         self.model.load_state_dict(self.best_nll_valid_state_dict_model)
-        self.contextmixer.load_state_dict(self.best_nll_valid_state_dict_contextmixer)
+        if self.contextmixer is not None: 
+            self.contextmixer.load_state_dict(self.best_nll_valid_state_dict_contextmixer) 
         tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
         print('(Best NLL)   Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))

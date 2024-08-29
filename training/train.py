@@ -3,10 +3,10 @@ import random
 import argparse
 import numpy as np
 
-from training import Trainer
 from models import get_model
 from datasets import get_dataset
 from utils import str2bool, set_seed
+from training import Trainer, AdamWScheduleFree, SGDScheduleFree
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--run', default=0, type=int, help='number of times to repeat experiment.')
@@ -43,7 +43,7 @@ parser.add_argument('--early_stopping_episodes', type=int, default=20, help='inn
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    set_seed(args.seed)
+    #set_seed(args.seed)
 
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
@@ -51,8 +51,12 @@ if __name__ == '__main__':
     print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
     model, contextmixer = get_model(args=args)
     
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr) #, weight_decay=args.wd)
-    optimizermixer = None if contextmixer is None else torch.optim.AdamW(contextmixer.parameters(), lr=args.clr, weight_decay=args.cwd)
+    #optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr) #, weight_decay=args.wd)
+    optimizer = AdamWScheduleFree(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    #optimizer = SGDScheduleFree(model.parameters(), lr=args.lr) #, weight_decay=args.wd)
+    #optimizermixer = None if contextmixer is None else torch.optim.AdamW(contextmixer.parameters(), lr=args.clr, weight_decay=args.cwd)
+    optimizermixer = None if contextmixer is None else AdamWScheduleFree(contextmixer.parameters(), lr=args.clr, weight_decay=args.cwd)
+    #optimizermixer = None if contextmixer is None else SGDScheduleFree(contextmixer.parameters(), lr=args.clr) #, weight_decay=args.cwd)
     
     trainer = Trainer(model=model.to(args.device), \
             contextmixer=contextmixer if contextmixer is None else contextmixer.to(args.device), \
