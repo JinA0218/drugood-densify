@@ -9,7 +9,7 @@ from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 class Trainer:
     def __init__(self, epochs=500, \
             model=None, \
-            contextmixer=None, \
+            mixer_phi=None, \
             optimizer=None, \
             testloader=None, \
             trainloader=None, \
@@ -23,7 +23,7 @@ class Trainer:
         self.testloader = testloader
         self.trainloader = trainloader
         self.validloader = validloader
-        self.contextmixer = contextmixer
+        self.mixer_phi = mixer_phi
         self.contextloader = contextloader
         self.optimizermixer = optimizermixer
         
@@ -39,16 +39,16 @@ class Trainer:
             self.optimizer.step()
         return np.mean(losses)
 
-    def test(self, dataloader, contextmixer=None):
+    def test(self, dataloader, mixer_phi=None):
         self.model.eval()
         self.optimizer.eval()
-        if contextmixer is not None:
-            contextmixer.eval()
+        if mixer_phi is not None:
+            mixer_phi.eval()
         
         with torch.no_grad():
             preds, labels = [], []
             for x, y in dataloader:
-                y_hat = self.model(x=x.to(self.args.device), contextmixer=contextmixer)
+                y_hat = self.model(x=x.to(self.args.device), mixer_phi=mixer_phi)
                 pred = torch.softmax(y_hat, dim=-1)
                 preds.append(pred[:, 1])
                 labels.append(y)
@@ -64,7 +64,7 @@ class Trainer:
         brier = brier_score_loss(labels, preds)
         return nll, auc_roc, brier
     
-    def train_contextmixer(self):
+    def train_mixer_phi(self):
         def approxInverseHVP(v, f, w, i=5, alpha=0.1):
             p = [v_.clone().detach() for v_ in v]
             for j in range(i):
@@ -84,8 +84,8 @@ class Trainer:
             d_LV_dlmbda = torch.autograd.grad(L_V, lmbda())
             return [d - v for d,v in zip(d_LV_dlmbda, v3)]
             
-        def train_mixer(model, optimizer, contextmixer, x, y, context, device, interp_loss=False):
-            model.train(); contextmixer.train()
+        def train_mixer(model, optimizer, mixer_phi, x, y, context, device, interp_loss=False):
+            model.train(); mixer_phi.train()
             if optimizer is not None:
                 optimizer.train()
             
@@ -94,13 +94,13 @@ class Trainer:
             x, y, context = x.to(device), y.to(device), context.to(device)
             
             #1. Mix context with labeled sample x
-            y_hat_mixed = model(x=x, context=context, contextmixer=contextmixer)
+            y_hat_mixed = model(x=x, context=context, mixer_phi=mixer_phi)
             loss = F.cross_entropy(y_hat_mixed, y, weight=self.trainloader.dataset.classweights.to(self.args.device))
             
             #2. Pass unmixed sample through model
-            y_hat = model(x=x, context=None, contextmixer=contextmixer)
-            loss = loss + F.cross_entropy(y_hat, y, weight=self.trainloader.dataset.classweights.to(self.args.device))
-
+            #y_hat = model(x=x, context=None, mixer_phi=mixer_phi)
+            #loss = loss + F.cross_entropy(y_hat, y, weight=self.trainloader.dataset.classweights.to(self.args.device))
+            
             if optimizer is not None:
                 optimizer.zero_grad()
                 loss.backward()
@@ -112,17 +112,17 @@ class Trainer:
         best_vauc = 0.0
         episodes_without_improvement = 0
         self.best_auc_valid_state_dict_model = deepcopy(self.model.state_dict())
-        self.best_auc_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+        self.best_auc_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
 
         best_vbrier = float('inf')
         episodes_without_improvement = 0
         self.best_brier_valid_state_dict_model = deepcopy(self.model.state_dict())
-        self.best_brier_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+        self.best_brier_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
         
         best_vnll = float('inf')
         episodes_without_improvement = 0
         self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
-        self.best_nll_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+        self.best_nll_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
 
         trainloader = InfIterator(self.trainloader)
         validloader = InfIterator(self.validloader)
@@ -134,34 +134,34 @@ class Trainer:
                 x, y = next(trainloader)
                 context = self.contextloader[torch.randperm(len(self.contextloader))[0]]
                 
-                train_loss = train_mixer(model=self.model, optimizer=self.optimizer, contextmixer=self.contextmixer,\
+                train_loss = train_mixer(model=self.model, optimizer=self.optimizer, mixer_phi=self.mixer_phi,\
                         x=x, y=y, context=context, device=self.args.device, interp_loss=True)
                 tlosses.append(train_loss.item())
                 
             #Compute hypergradients
             x_t, y_t = next(trainloader) #self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
             context_t = self.contextloader[torch.randperm(len(self.contextloader))[0]]
-            L_T = train_mixer(model=self.model, optimizer=None, contextmixer=self.contextmixer, x=x_t, y=y_t, \
+            L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                     context=context_t, device=self.args.device)
         
-            self.model.eval(); self.contextmixer.eval()
+            self.model.eval(); self.mixer_phi.eval()
             x_v, y_v = next(validloader) #self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
             context_v = None #self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
-            y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, contextmixer=self.contextmixer)
+            y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
             
             L_V = F.cross_entropy(y_v_hat[:, 1], y_v.to(self.args.device)) #, weight=self.validloader.dataset.classweights.to(self.args.device))
             
-            hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.contextmixer.parameters, w=self.model.parameters, i=5, alpha=self.args.lr)
+            hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=self.model.parameters, i=5, alpha=self.args.lr)
             
             self.optimizermixer.zero_grad()
-            for p, g in zip(self.contextmixer.parameters(), hgrads):
+            for p, g in zip(self.mixer_phi.parameters(), hgrads):
                 hypergrad = torch.clamp(g, 5.0, 5.0)
                 hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
                 p.grad = hypergrad
             self.optimizermixer.step()
             
             #Run model on validation set.
-            vnll, vauc, vbrier = self.test(dataloader=self.validloader, contextmixer=self.contextmixer)
+            vnll, vauc, vbrier = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
             
             print('Episode: {:<3} tloss: {:.3f} vnll: {:.3f} vauc: {:.3f} vbrier: {:.3f}'.format(\
                         episode, np.mean(tlosses), vnll, vauc, vbrier))
@@ -170,7 +170,7 @@ class Trainer:
                 best_vauc = vauc
                 episodes_without_improvement = 0
                 self.best_auc_valid_state_dict_model = deepcopy(self.model.state_dict())
-                self.best_auc_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+                self.best_auc_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
             else:
                 episodes_without_improvement += 1
                 if episodes_without_improvement == self.args.early_stopping_episodes:
@@ -180,16 +180,16 @@ class Trainer:
                 best_vbrier = vbrier
                 episodes_without_improvement = 0
                 self.best_brier_valid_state_dict_model = deepcopy(self.model.state_dict())
-                self.best_brier_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+                self.best_brier_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
             
             if vnll < best_vnll:
                 best_vnll = vnll
                 episodes_without_improvement = 0
                 self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
-                self.best_nll_valid_state_dict_contextmixer = deepcopy(self.contextmixer.state_dict())
+                self.best_nll_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
          
     def fit(self):
-        if self.contextmixer is None:
+        if self.mixer_phi is None:
             self.tlosses, self.vnlls, self.vaucs, self.vbriers, self.tnlls, self.taucs, self.tbriers = [], [], [], [], [], [], []
             
             best_vauc = 0.0
@@ -228,28 +228,28 @@ class Trainer:
                     episodes_without_improvement = 0
                     self.best_nll_valid_state_dict_model = deepcopy(self.model.state_dict())
         else:
-            self.train_contextmixer()
+            self.train_mixer_phi()
         
         #Run model on test set.
         print('{} {} {}'.format(self.args.dataset, self.args.split_type, self.args.fingerprint))
         
-        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
         print('(Last Model) Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
 
         self.model.load_state_dict(self.best_auc_valid_state_dict_model)
-        if self.contextmixer is not None: 
-            self.contextmixer.load_state_dict(self.best_auc_valid_state_dict_contextmixer)
-        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        if self.mixer_phi is not None: 
+            self.mixer_phi.load_state_dict(self.best_auc_valid_state_dict_mixer_phi)
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
         print('(Best AUC)   Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
         
         self.model.load_state_dict(self.best_brier_valid_state_dict_model)
-        if self.contextmixer is not None: 
-            self.contextmixer.load_state_dict(self.best_brier_valid_state_dict_contextmixer)
-        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        if self.mixer_phi is not None: 
+            self.mixer_phi.load_state_dict(self.best_brier_valid_state_dict_mixer_phi)
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
         print('(Best BRIER) Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))
 
         self.model.load_state_dict(self.best_nll_valid_state_dict_model)
-        if self.contextmixer is not None: 
-            self.contextmixer.load_state_dict(self.best_nll_valid_state_dict_contextmixer) 
-        tnll, tauc, tbrier = self.test(dataloader=self.testloader, contextmixer=self.contextmixer)
+        if self.mixer_phi is not None: 
+            self.mixer_phi.load_state_dict(self.best_nll_valid_state_dict_mixer_phi) 
+        tnll, tauc, tbrier = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
         print('(Best NLL)   Tnll: {:.3f} Tauc: {:.3f} Tbrier: {:.3f}'.format(tnll, tauc, tbrier))

@@ -1,5 +1,5 @@
 import torch.nn as nn
-from models import MLP, ContextMixer
+from models import MLP, MLP2, ContextMixer
 
 def initialize_weights(model):
     for m in model.modules():
@@ -20,14 +20,25 @@ def get_model(args):
                 num_outputs=args.num_outputs, \
                 dropout=args.dropout, \
                 batchnorm=args.batchnorm)
-
-        if args.initialize_weights:
-            initialize_weights(model=model)
+    elif args.model == 'mlp2':
+        model = MLP2(in_features=args.in_features, \
+                hidden_dim=args.hidden_dim, \
+                num_layers=args.num_layers, \
+                num_outputs=args.num_outputs, \
+                dropout=args.dropout, \
+                batchnorm=args.batchnorm)
     else:
         raise NotImplementedError
     
-    contextmixer = None
-    if args.contextmixer:
-        #TODO: Move remaining parameters to args
-        contextmixer = ContextMixer(dim_in=args.hidden_dim, dim_hidden=args.hidden_dim, num_inds=32, num_outputs=1, num_heads=4, ln=True)
-    return model, contextmixer
+    if args.initialize_weights:
+            initialize_weights(model=model)
+
+    mixer_phi = None
+    if args.mixer_phi:
+        hidden_dim = args.hidden_dim if args.model == 'mlp' else 2*args.hidden_dim
+        mixer_phi = ContextMixer(dim_in=args.hidden_dim, dim_hidden=hidden_dim, num_inds=32, num_outputs=1, num_heads=4, ln=True)
+
+        if args.initialize_weights:
+            initialize_weights(model=mixer_phi)
+
+    return model, mixer_phi

@@ -24,8 +24,8 @@ parser.add_argument('--optimizer', default='adamw', type=str, help='dataset used
 parser.add_argument('--num_workers', default=8, type=int, help='trainloader number of workers.')
 parser.add_argument('--lr', default=1e-3, type=float, help='learning rate.')
 parser.add_argument('--wd', default=1e-5, type=float, help='weight decay.')
-parser.add_argument('--clr', default=1e-3, type=float, help='contextmixer learning rate.')
-parser.add_argument('--cwd', default=1e-5, type=float, help='contextmixer weight decay.')
+parser.add_argument('--clr', default=1e-3, type=float, help='mixer_phi learning rate.')
+parser.add_argument('--cwd', default=1e-5, type=float, help='mixer_phi weight decay.')
 
 parser.add_argument('--hidden_dim', default=32, type=int, help='dimension to project each weight element.')
 parser.add_argument('--in_features', default=2048, type=int, help='dimension to input features.')
@@ -35,7 +35,7 @@ parser.add_argument('--batchnorm', default=True, type=str2bool, help='batchnorm.
 parser.add_argument('--initialize_weights', default=False, type=str2bool, help='init weigths or not.')
 
 #Parameters for hyperparameter optimization
-parser.add_argument('--contextmixer', default=False, type=str2bool, help='use context mixer or not.')
+parser.add_argument('--mixer_phi', default=False, type=str2bool, help='use context mixer or not.')
 parser.add_argument('--outer_episodes', type=int, default=100, help='outer episodes for BO')
 parser.add_argument('--inner_episodes', type=int, default=5, help='inner episodes for BO')
 parser.add_argument('--early_stopping_episodes', type=int, default=20, help='inner episodes for BO')
@@ -49,13 +49,13 @@ if __name__ == '__main__':
     
     trainloader, validloader, testloader, contextloader = get_dataset(args=args)
     print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
-    model, contextmixer = get_model(args=args)
+    model, mixer_phi = get_model(args=args)
     
     optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd)
-    optimizermixer = None if contextmixer is None else get_optimizer(optimizer=args.optimizer, model=contextmixer, lr=args.clr, wd=args.cwd)
+    optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
     
     trainer = Trainer(model=model.to(args.device), \
-            contextmixer=contextmixer if contextmixer is None else contextmixer.to(args.device), \
+            mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
             optimizer=optimizer, \
             optimizermixer = optimizermixer, \
             trainloader=trainloader, \

@@ -43,7 +43,7 @@ class ZINC(Dataset):
         return data[randperm, :].float()
     
     def __len__(self):
-        return 100 #len(self.data)
+        return len(self.data)
 
 class AntiMalaria(Dataset):
     ''' 
@@ -135,8 +135,8 @@ def get_dataset(args):
             shuffle=False, pin_memory=True)
     
     contextloader = None
-    if args.contextmixer:
-        contextloader = ZINC(batchsize=args.batch_size)
+    if args.mixer_phi:
+        contextloader = ZINC(batchsize=args.batch_size, fingerprint=args.fingerprint)
         #contextloader = DataLoader(contextdata, \
         #        batch_size=args.batch_size, \
         #        num_workers=args.num_workers, \
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     args.fingerprint = 'ecfp'
     args.dataset = 'antimalaria'
     args.split_type = 'spectral'
-    args.contextmixer = None
+    args.mixer_phi = None
     
     trainloader, validloader, testloader, _ = get_dataset(args=args)
     exit()

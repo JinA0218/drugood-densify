@@ -110,19 +110,18 @@ class PMA(nn.Module):
 class STEncoder(nn.Module):
     def __init__(self, dim_in, dim_hidden, num_inds=16, num_heads=4, num_outputs=1, ln=False):
         super(STEncoder, self).__init__()
-        ln = False
         self.encoder = nn.Sequential(
                 #SAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
                 #SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
                 ISAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln),
                 ISAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln),
-                #PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
+                PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
                 )
 
     def forward(self, X):
-        X = self.encoder(X)
-        return X.sum(dim=1)
-        #return self.encoder(X).squeeze(1)
+        #X = self.encoder(X)
+        #return X.sum(dim=1)
+        return self.encoder(X).squeeze(1)
 
 class DSEncoder(nn.Module):
     def __init__(self, dim_in, dim_hidden, num_inds=16, num_heads=4, num_outputs=1, ln=True):
@@ -131,8 +130,8 @@ class DSEncoder(nn.Module):
                 PermEquiSum(in_dim=dim_in, out_dim=dim_hidden),
                 #PermEquiMean(in_dim=dim_in, out_dim=dim_hidden),
                 #PermEquiMax(in_dim=dim_in, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
+                PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
+                PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
                 #PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
                 )
 
@@ -156,15 +155,6 @@ class ContextMixer(nn.Module):
         #self.enc = STEncoder(dim_in=dim_in, dim_hidden=dim_hidden)
         self.enc = DSEncoder(dim_in=dim_in, dim_hidden=dim_hidden)
 
-        if dim_in != dim_hidden:
-            self.linear = nn.Sequential(
-                    nn.Linear(in_features=dim_hidden, out_features=dim_in),
-                    )
-        else:
-            self.linear = None
-
     def forward(self, X):
         X = self.enc(X)
-        if self.linear is not None:
-            X = self.linear(X)
         return X.squeeze(1)
