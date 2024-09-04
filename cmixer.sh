@@ -1,4 +1,5 @@
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python training/train.py \
+  --model mlp2 \
   --contextmixer True \
   --optimizer adamwschedulefree \
   --split spectral \
