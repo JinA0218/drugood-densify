@@ -43,7 +43,7 @@ parser.add_argument('--early_stopping_episodes', type=int, default=20, help='inn
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    #set_seed(args.seed)
+    set_seed(args.seed)
 
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
