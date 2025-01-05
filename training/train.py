@@ -44,6 +44,8 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     set_seed(args.seed)
+    if args.fingerprint == 'rdkit':
+        args.in_features = 2042
 
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     

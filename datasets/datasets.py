@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 __all__ = ['get_dataset']
 
 split_types = {
-        'spectral': 'ec_bit_fp_spectral_split',
+        'spectral': 'spectral_split',
         'random': 'random_split',
         'scaffold': 'scaffold_split',
         'weight': 'mw_split',
@@ -17,7 +17,7 @@ split_types = {
 
 fingerprints = {
         'ecfp': 'ec_bit_fp',
-        'rdkit': 'rdkit',
+        'rdkit': 'rdkit_bit_fp',
         }
 
 class ZINC(Dataset):
@@ -148,14 +148,13 @@ if __name__ == '__main__':
     args.root = 'data'
     args.num_workers = 4
     args.batch_size = 128
-    args.fingerprint = 'ecfp'
+    args.fingerprint = 'rdkit'
     args.dataset = 'antimalaria'
     args.split_type = 'spectral'
     args.mixer_phi = None
     
     trainloader, validloader, testloader, _ = get_dataset(args=args)
-    exit()
     labels = []
     for x, y in trainloader:
-        labels.append(y)
-    y = torch.cat(labels, dim=0)
+        print(x.size())
+    #y = torch.cat(labels, dim=0)
