@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 
+from setenc import ContextMixer
 from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
 
@@ -567,7 +568,7 @@ class Trainer:
 if __name__ == '__main__':
     args = get_arguments()
 
-    set_seed(args.seed)
+    #set_seed(args.seed)
         
     trainloader, validloader, testloader, contextloader = get_dataset(args=args)
     print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
