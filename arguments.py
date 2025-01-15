@@ -29,6 +29,7 @@ def get_arguments():
     parser.add_argument('--num_layers', default=2, type=int, help='number of layers.')
     parser.add_argument('--dropout', default=0.2, type=float, help='dropout rate.')
     parser.add_argument('--batchnorm', default=True, type=str2bool, help='batchnorm.')
+    parser.add_argument('--ln', default=False, type=str2bool, help='batchnorm.')
     parser.add_argument('--initialize_weights', default=False, type=str2bool, help='init weigths or not.')
 
     #Parameters for hyperparameter optimization

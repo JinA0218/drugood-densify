@@ -1,0 +1,20 @@
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main.py \
+  --model mlp \
+  --mixer_phi True \
+  --optimizer adamwschedulefree \
+  --split spectral \
+  --fingerprint ecfp \
+  --seed 42 \
+  --lr 1e-3 \
+  --wd 0.0 \
+  --clr 1e-3 \
+  --cwd 5e-4 \
+  --dropout 0.2 \
+  --num_layers 1 \
+  --hidden_dim 32 \
+  --batch_size 128 \
+  --batchnorm False \
+  --outer_episodes 50 \
+  --inner_episodes 5 \
+  --initialize_weights False \
+  --early_stopping_episodes 100

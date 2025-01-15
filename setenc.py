@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['ContextMixer']
+__all__ = ['get_mixer']
 
 class PermEquiMax(nn.Module):
     def __init__(self, in_dim, out_dim):
@@ -158,3 +158,6 @@ class ContextMixer(nn.Module):
     def forward(self, X):
         X = self.enc(X)
         return X.squeeze(1)
+
+def get_mixer(args):
+    return ContextMixer(dim_in=args.hidden_dim, dim_hidden=args.hidden_dim, num_outputs=args.num_outputs, ln=args.ln)
