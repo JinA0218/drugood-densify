@@ -85,7 +85,7 @@ class Merck(Dataset):
         if self.vec_type == "count":
             return self.data[index], self.labels[index]
         elif self.vec_type == "bit":
-            return self.data[index] > 0, self.labels[index]
+            return (self.data[index] > 0).float(), self.labels[index]
         else:
             raise NotImplementedError()
 
@@ -138,7 +138,7 @@ def get_dataset(args):
 
     contextloader = None
     if args.mixer_phi:
-        contextloader = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=True, batchsize=args.batch_size * 2)
+        contextloader = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=True, batchsize=args.batch_size * 16)
     return trainloader, validloader, testloader, contextloader
 
 
@@ -169,7 +169,7 @@ class Trainer:
         self.optimizer.train()
         for x, y in self.trainloader:
             y_hat = self.model(x=x.to(self.args.device))
-            loss = F.cross_entropy(y_hat, y.to(self.args.device))
+            loss = F.mse_loss(y_hat.squeeze(), y.to(self.args.device))
             losses.append(loss.item())
             loss.backward()
             self.optimizer.step()
@@ -177,7 +177,9 @@ class Trainer:
 
     def calc_loss(self, y_hat, y, test=False):
         if test:
-            return F.mse_loss(y.cuda().squeeze(), y_hat[:, 0].cuda().squeeze())
+            if len(y_hat.size()) > 1:
+                return F.mse_loss(y.cuda().squeeze(), y_hat[:, 0].cuda().squeeze())
+            return F.mse_loss(y.cuda().squeeze(), y_hat.cuda().squeeze())
 
         y_hat_real = y_hat[:, 0]
         loss = F.mse_loss(y, y_hat_real)
@@ -287,13 +289,13 @@ class Trainer:
             context_v = None  # self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
             y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
 
-            L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=True)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
+            L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
 
             hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=self.model.parameters, i=5, alpha=self.args.lr)
 
             self.optimizermixer.zero_grad()
             for p, g in zip(self.mixer_phi.parameters(), hgrads):
-                hypergrad = torch.clamp(g, 5.0, 5.0)
+                hypergrad = torch.clamp(g, -5.0, 5.0)
                 hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
                 p.grad = hypergrad
             self.optimizermixer.step()

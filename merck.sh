@@ -1,11 +1,34 @@
+# CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main_merck.py \
+#   --model mlp2 \
+#   --mixer_phi True \
+#   --optimizer adamwschedulefree \
+#   --seed 42 \
+#   --lr 1e-5 \
+#   --wd 0.0 \
+#   --clr 1e-5 \
+#   --cwd 1e-5 \
+#   --dropout 0.5 \
+#   --num_layers 1 \
+#   --hidden_dim 64 \
+#   --batch_size 128 \
+#   --batchnorm False \
+#   --outer_episodes 30 \
+#   --inner_episodes 50 \
+#   --initialize_weights False \
+#   --early_stopping_episodes 100 \
+#   --in_features 6560 \
+#   --num_outputs 1 \
+#   --vec_type count \
+#   --dataset hivprot
+
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main_merck.py \
-  --model mlp2 \
-  --mixer_phi True \
+  --model mlp \
+  --mixer_phi False \
   --optimizer adamwschedulefree \
   --seed 42 \
-  --lr 1e-5 \
+  --lr 1e-3 \
   --wd 0.0 \
-  --clr 1e-5 \
+  --clr 1e-3 \
   --cwd 1e-5 \
   --dropout 0.5 \
   --num_layers 1 \
@@ -18,4 +41,5 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main_merck.py \
   --early_stopping_episodes 100 \
   --in_features 6560 \
   --num_outputs 1 \
+  --vec_type count \
   --dataset hivprot
