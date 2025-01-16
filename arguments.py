@@ -4,6 +4,7 @@ from utils import str2bool
 
 __all__ = ['get_arguments']
 
+
 def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--run', default=0, type=int, help='number of times to repeat experiment.')
@@ -16,6 +17,7 @@ def get_arguments():
     parser.add_argument('--batch_size', default=128, type=int, help='batchsize.')
     parser.add_argument('--num_outputs', default=2, type=int, help='number of properties to predict.')
 
+    parser.add_argument('--vec_type', default='count', type=str, help='bit or count vector (for Merck)')
     parser.add_argument('--epochs', default=50, type=int, help='number of training epochs.')
     parser.add_argument('--optimizer', default='adamw', type=str, help='dataset used to train zoo.')
     parser.add_argument('--num_workers', default=8, type=int, help='trainloader number of workers.')
@@ -32,14 +34,14 @@ def get_arguments():
     parser.add_argument('--ln', default=False, type=str2bool, help='batchnorm.')
     parser.add_argument('--initialize_weights', default=False, type=str2bool, help='init weigths or not.')
 
-    #Parameters for hyperparameter optimization
+    # Parameters for hyperparameter optimization
     parser.add_argument('--mixer_phi', default=False, type=str2bool, help='use context mixer or not.')
     parser.add_argument('--outer_episodes', type=int, default=100, help='outer episodes for BO')
     parser.add_argument('--inner_episodes', type=int, default=5, help='inner episodes for BO')
     parser.add_argument('--early_stopping_episodes', type=int, default=20, help='inner episodes for BO')
 
     args = parser.parse_args()
-    
+
     if args.fingerprint == 'rdkit':
         args.in_features = 2042
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
