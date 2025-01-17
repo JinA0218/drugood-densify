@@ -41,11 +41,12 @@ class ZINC(Dataset):
 
     def __getitem__(self, index):
         data = torch.load(self.data[index])
-        data = data[0]
+        i = 0 #torch.randperm(data.size(0))[0]
+        data = data[i]
         return data.float()
     
     def __len__(self):
-        return 128 #len(self.data)
+        return len(self.data)
 
 class AntiMalaria(Dataset):
     ''' 
@@ -164,7 +165,7 @@ def get_dataset(args):
                 batch_size=args.batch_size,
                 num_workers=args.num_workers,
                 shuffle=True,
-                pin_memory=True,
+                #pin_memory=True,
             drop_last=True,
                 )
     #Make it an infinite iterator
@@ -309,25 +310,27 @@ class Trainer:
         validloader = iter(itertools.cycle(self.validloader)) 
        
         self.optimizermixer.train() #Note: This is here because of the adamwschedulefree optimizer and does nothing for other optimizers.
+        n_samples = 1
         with tqdm(range(self.args.outer_episodes), desc='Training', dynamic_ncols=True, leave=False) as pbar:
             for episode in pbar:
                 tlosses = []
                 for k in tqdm(range(self.args.inner_episodes), ncols=75, leave=False):
                     x, y = next(trainloader)
-                    context = next(self.contextloader)
+                    context = torch.cat([next(self.contextloader).unsqueeze(1) for _ in range(n_samples)], dim=1)
+                    
                     
                     train_loss = train_mixer(model=self.model, optimizer=self.optimizer, mixer_phi=self.mixer_phi,\
                             x=x, y=y, context=context, device=self.args.device, interp_loss=True)
                     tlosses.append(train_loss.item())
                     
                 #Compute hypergradients
-                x_t, y_t = get_data_n_times(loader=trainloader, n=20)
-                context_t = get_data_n_times(self.contextloader, n=20)
+                x_t, y_t = next(trainloader) #get_data_n_times(loader=trainloader, n=5)
+                context_t = torch.cat([next(self.contextloader).unsqueeze(1) for _ in range(n_samples)], dim=1)  #get_data_n_times(self.contextloader, n=5)
                 L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                         context=context_t, device=self.args.device)
             
-                self.model.eval(); self.mixer_phi.eval()
-                x_v, y_v = get_data_n_times(loader=validloader, n=50)
+                #self.model.eval(); self.mixer_phi.eval()
+                x_v, y_v = get_data_n_times(loader=validloader, n=1)
 
                 context_v = None 
                 y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
@@ -338,14 +341,14 @@ class Trainer:
                 
                 self.optimizermixer.zero_grad()
                 for p, g in zip(self.mixer_phi.parameters(), hgrads):
-                    hypergrad = torch.clamp(g, 5.0, 5.0)
+                    hypergrad = torch.clamp(g, -5.0, 5.0)
                     hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
                     p.grad = hypergrad
                 self.optimizermixer.step()
                 
                 #Run model on validation set.
-                #vnll, vauc, vbrier = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
-                vnll, vauc, vbrier = self.test(dataloader=self.validloader, mixer_phi=None)
+                vnll, vauc, vbrier = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
+                #vnll, vauc, vbrier = self.test(dataloader=self.validloader, mixer_phi=None)
                 
                 if vauc > best_vauc:
                     best_vauc = vauc

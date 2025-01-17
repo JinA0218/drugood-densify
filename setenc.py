@@ -115,30 +115,37 @@ class STEncoder(nn.Module):
                 #SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
                 ISAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln),
                 ISAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln),
-                PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
+                #PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
                 )
 
     def forward(self, X):
-        #X = self.encoder(X)
-        #return X.sum(dim=1)
-        return self.encoder(X).squeeze(1)
+        X = self.encoder(X)
+        return X.mean(dim=1)
+        #return self.encoder(X).squeeze(1)
 
 class DSEncoder(nn.Module):
     def __init__(self, dim_in, dim_hidden, num_inds=16, num_heads=4, num_outputs=1, ln=True):
         super(DSEncoder, self).__init__()
         self.encoder = nn.Sequential(
-                PermEquiSum(in_dim=dim_in, out_dim=dim_hidden),
-                #PermEquiMean(in_dim=dim_in, out_dim=dim_hidden),
+                #PermEquiSum(in_dim=dim_in, out_dim=dim_hidden),
                 #PermEquiMax(in_dim=dim_in, out_dim=dim_hidden),
+                #PermEquiSum(in_dim=dim_hidden, out_dim=dim_hidden),
+                #PermEquiSum(in_dim=dim_in, out_dim=dim_hidden),
+                #PermEquiMean(in_dim=dim_in, out_dim=dim_hidden),
+                PermEquiMax(in_dim=dim_in, out_dim=dim_hidden),
                 PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
                 PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
+                PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
+                PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
+                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
                 #PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
                 )
 
     def forward(self, X):
         X = self.encoder(X)
         #X, _ = X.mean(1)
-        X = X.sum(1)
+        #X = X.sum(1)
+        X, _ = X.max(1)
         return X
 
 class ContextMixer(nn.Module):

@@ -58,7 +58,8 @@ class MLP(nn.Module):
         z_x = self.mlp_theta(x)
         if context is not None:
             z_c = self.mlp_theta(context)
-            z_xc = mixer_phi(X=torch.cat([z_x.unsqueeze(1), z_c[:x.size(0), :].unsqueeze(1)], dim=1))
+            #z_xc = mixer_phi(X=torch.cat([z_x.unsqueeze(1), z_c[:x.size(0), :].unsqueeze(1)], dim=1))
+            z_xc = mixer_phi(X=torch.cat([z_x.unsqueeze(1), z_c[:x.size(0), :, :]], dim=1))
         else:
             if mixer_phi is not None: #NOTE: This is for when we train the plain mlp without contextmixer
                 z_xc = mixer_phi(X=z_x.unsqueeze(1))

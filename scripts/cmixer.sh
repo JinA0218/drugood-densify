@@ -7,14 +7,14 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main.py \
   --seed 42 \
   --lr 1e-3 \
   --wd 0.0 \
-  --clr 1e-3 \
+  --clr 1e-5 \
   --cwd 5e-4 \
-  --dropout 0.2 \
+  --dropout 0.5 \
   --num_layers 1 \
   --hidden_dim 32 \
-  --batch_size 128 \
+  --batch_size 64 \
   --batchnorm False \
-  --outer_episodes 50 \
+  --outer_episodes 200 \
   --inner_episodes 5 \
   --initialize_weights False \
   --early_stopping_episodes 100
