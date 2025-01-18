@@ -36,14 +36,15 @@ class ZINC(Dataset):
 
     def load_data(self):
         path = os.path.join('data/ZINC', self.fingerprint)
-        filepaths = glob.glob(os.path.join(path, '*.pth'))
+        filepaths = glob.glob(os.path.join(path, '*.npy'))
         return filepaths
 
     def __getitem__(self, index):
-        data = torch.load(self.data[index])
-        i = 0 #torch.randperm(data.size(0))[0]
-        data = data[i]
-        return data.float()
+        path = self.data[index]
+        data = np.load(path, mmap_mode='r')
+        i = torch.randperm(data.shape[0])[0]
+        data = torch.from_numpy(data[i].copy())
+        return data
     
     def __len__(self):
         return len(self.data)
@@ -80,7 +81,7 @@ class AntiMalaria(Dataset):
                 '2', 
                 '{}.pth'.format(self.split)
                 )
-        data = torch.load(datapath)
+        data = torch.load(datapath, weights_only=True)
         features, labels = data['x'].float(), data['y']
         return features, labels
 
@@ -166,8 +167,9 @@ def get_dataset(args):
                 num_workers=args.num_workers,
                 shuffle=True,
                 #pin_memory=True,
-            drop_last=True,
+                drop_last=True,
                 )
+
     #Make it an infinite iterator
     contextloader = iter(itertools.cycle(contextloader)) 
     return trainloader, validloader, testloader, contextloader
