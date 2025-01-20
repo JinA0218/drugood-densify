@@ -140,6 +140,7 @@ def get_dataset(args):
             pin_memory=True,
             drop_last=True,
             )
+    
     validloader = DataLoader(
             validset, 
             batch_size=args.batch_size, 
@@ -156,7 +157,10 @@ def get_dataset(args):
             num_workers=args.num_workers, \
             #worker_init_fn=seed_worker, \
             #generator=g,
-            shuffle=False, pin_memory=True)
+            shuffle=False, 
+            pin_memory=True,
+            #drop_last=True,
+                            )
     
     contextloader = None
     if args.mixer_phi:
@@ -326,6 +330,7 @@ class Trainer:
                     tlosses.append(train_loss.item())
                     
                 #Compute hypergradients
+                #x_t, y_t = get_data_n_times(loader=trainloader, n=5)
                 x_t, y_t = next(trainloader) #get_data_n_times(loader=trainloader, n=5)
                 context_t = torch.cat([next(self.contextloader).unsqueeze(1) for _ in range(n_samples)], dim=1)  #get_data_n_times(self.contextloader, n=5)
                 L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
@@ -335,6 +340,7 @@ class Trainer:
                 x_v, y_v = get_data_n_times(loader=validloader, n=1)
 
                 context_v = None 
+                #context_v = torch.cat([next(self.contextloader).unsqueeze(1) for _ in range(n_samples)], dim=1).to(self.args.device)
                 y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
                 
                 L_V = F.cross_entropy(y_v_hat[:, 1], y_v.to(self.args.device)) #, weight=self.validloader.dataset.classweights.to(self.args.device))
