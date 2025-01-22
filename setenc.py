@@ -70,7 +70,7 @@ class MAB(nn.Module):
         #A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V), 2)
         A = torch.sigmoid(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V))
         #A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(dim_split), 2)
-        A = F.dropout(A, p=0.2, training=self.training)
+        #A = F.dropout(A, p=0.2, training=self.training)
         O = torch.cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
         O = O if getattr(self, 'ln0', None) is None else self.ln0(O)
         O = O + F.relu(self.fc_o(O))
@@ -132,13 +132,15 @@ class STEncoder(nn.Module):
         self.encoder = []
         for i in range(num_layers):
             if i == 0:
-                self.encoder.append(stlayer(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
+                self.encoder.append(stlayer(dim_in=dim_in, dim_out=dim_hidden//2 if num_layers > 1 else dim_hidden, num_heads=num_heads, ln=ln))
             else:
-                self.encoder.append(stlayer(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
+                self.encoder.append(stlayer(dim_in=dim_hidden//2 if num_layers > 1 else dim_hidden, dim_out=dim_hidden//2 if num_layers > 1 else
+                                            dim_hidden, num_heads=num_heads, ln=ln))
         if pool == 'pma':
-            self.encoder.append(PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln))
+            self.encoder.append(PMA(dim=dim_hidden//2 if num_layers > 1 else dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln))
         self.encoder = nn.Sequential(*self.encoder)
-        
+        self.proj = nn.Linear(in_features=dim_hidden//2 if num_layers > 1 else dim_hidden, out_features=dim_hidden)
+
     def aggregate(self, X):
         if self.pool == 'max':
             X, _ = X.max(dim=1)
@@ -152,6 +154,7 @@ class STEncoder(nn.Module):
         X = self.encoder(X)
         if self.pool in ['mean', 'max', 'sum']:
             X = self.aggregate(X=X)
+        X = self.proj(X)
         return X
 
 class DSEncoder(nn.Module):
@@ -195,7 +198,8 @@ class DSEncoder(nn.Module):
 
 class ContextMixer(nn.Module):
     #def __init__(self, sencoder='dsets', layer='max', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
-    def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
+    def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4,
+                 dim_proj=512, ln=True):
         super(ContextMixer, self).__init__()
         self.r_theta_1 = nn.Sequential(
                 nn.Linear(in_features=dim_in, out_features=dim_proj),
