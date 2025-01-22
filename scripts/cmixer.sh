@@ -1,8 +1,8 @@
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main.py \
-  --root /c2/jeff/DrugDiscovery/data/ \
+  --root data/ \
   --model mlp \
   --mixer_phi True \
-  --optimizer adamw \
+  --optimizer adamwschedulefree \
   --split spectral \
   --fingerprint ecfp \
   --seed 42 \
@@ -16,7 +16,7 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main.py \
   --hidden_dim 32 \
   --batch_size 64 \
   --batchnorm False \
-  --outer_episodes 100 \
+  --outer_episodes 200 \
   --inner_episodes 10 \
   --initialize_weights False \
   --early_stopping_episodes 100

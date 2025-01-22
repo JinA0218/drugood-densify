@@ -45,7 +45,7 @@ class ZINC(Dataset):
         data = np.load(path, mmap_mode='r')
         i = torch.randperm(data.shape[0])[0]
         data = torch.from_numpy(data[i].copy())
-        return data
+        return data.float()
     
     def __len__(self):
         return len(self.data)
@@ -93,10 +93,10 @@ class AntiMalaria(Dataset):
             y[int(y_i.item())] = 1.0
         else:
             y = y_i
-        return x, y.float()
+        return x.float(), y.float()
     
     def get_all_data(self):
-        return self.features, self.labels.float()
+        return self.features.float(), self.labels.float()
 
     def __len__(self):
         return self.features.size(0)
@@ -287,8 +287,8 @@ class Trainer:
             loss = F.cross_entropy(y_hat_mixed, y) #, weight=self.trainloader.dataset.classweights.to(self.args.device))
             
             #2. Pass unmixed sample through model
-            #y_hat = model(x=x, context=None, mixer_phi=mixer_phi)
-            #loss = loss + F.cross_entropy(y_hat, y, weight=self.trainloader.dataset.classweights.to(self.args.device))
+            y_hat = model(x=x, context=None, mixer_phi=mixer_phi)
+            loss = loss + F.cross_entropy(y_hat, y) #, weight=self.trainloader.dataset.classweights.to(self.args.device))
             
             if optimizer is not None:
                 optimizer.zero_grad()
@@ -317,7 +317,7 @@ class Trainer:
         validloader = iter(itertools.cycle(self.validloader)) 
        
         self.optimizermixer.train() #Note: This is here because of the adamwschedulefree optimizer and does nothing for other optimizers.
-        n_samples = 1
+        n_samples = (torch.randperm(32) + 1)[0].item()
         with tqdm(range(self.args.outer_episodes), desc='Training', dynamic_ncols=True, leave=False) as pbar:
             for episode in pbar:
                 tlosses = []

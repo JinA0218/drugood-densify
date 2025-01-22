@@ -1,6 +1,7 @@
 import math
 import torch
 import torch.nn as nn
+from functools import partial
 import torch.nn.functional as F
 
 __all__ = ['get_mixer']
@@ -109,119 +110,115 @@ class PMA(nn.Module):
         return self.mab(self.S.repeat(X.size(0), 1, 1), X)
 
 class STEncoder(nn.Module):
-    def __init__(self, block, dim_in, dim_hidden, num_layers=2, num_inds=16, num_heads=4, num_outputs=1, ln=False):
+    def __init__(self, dim_in, dim_hidden, num_layers=2, num_inds=16, num_heads=4, num_outputs=1, ln=False, layer='sab', pool='pma'):
         super(STEncoder, self).__init__()
-        self.encoder = []
-        self.encoder = nn.Sequential(
-                SAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
-                #SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
-                #SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln),
-                #ISAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln),
-                #ISAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln),
-                #PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
-                )
-        #if block == 'sab':
-        #    self.encoder.append(SAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
-        #    for i in range(num_layers):
-        #        self.encoder.append(SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
-        #elif block == 'isab':
-        #    self.encoder.append(ISAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln))
-        #    for i in range(num_layers):
-        #        self.encoder.append(ISAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln))
-        #else:
-        #    raise NotImplementedError
-        #self.encoder = nn.Sequential(*self.encoder)
+        self.ln = ln
+        self.pool = pool
+        self.layer = layer
+        self.dim_in = dim_in
+        self.num_inds = num_inds
+        self.num_heads = num_heads
+        self.dim_hidden = dim_hidden
+        self.num_layers = num_layers
+        self.num_outputs = num_outputs
         
+        if layer == 'sab':
+            stlayer = SAB
+        elif layer == 'isab':
+            stlayer = partial(ISAB, num_inds=num_inds)
+        else:
+            raise NotImplementedError
+        
+        self.encoder = []
+        for i in range(num_layers):
+            if i == 0:
+                self.encoder.append(stlayer(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
+            else:
+                self.encoder.append(stlayer(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
+        if pool == 'pma':
+            self.encoder.append(PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln))
+        self.encoder = nn.Sequential(*self.encoder)
+        
+    def aggregate(self, X):
+        if self.pool == 'max':
+            X, _ = X.max(dim=1)
+        elif self.pool == 'mean':
+            X = X.mean(dim=1)
+        elif self.pool == 'sum':
+            X = X.sum(dim=1)
+        return X
+   
     def forward(self, X):
         X = self.encoder(X)
-        X = X.max(1).values
+        if self.pool in ['mean', 'max', 'sum']:
+            X = self.aggregate(X=X)
         return X
 
 class DSEncoder(nn.Module):
-    def __init__(self, dim_in, dim_hidden, num_layers=4, layer='max'):
+    def __init__(self, dim_in, dim_hidden, num_layers=1, layer='max'):
         super(DSEncoder, self).__init__()
-        self.encoder = nn.Sequential(
-                PermEquiMax(in_dim=dim_in, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
-                #PermEquiMax(in_dim=dim_hidden, out_dim=dim_hidden),
-                #PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln),
-                )
+        self.layer = layer
+        self.dim_in = dim_in
+        self.dim_hidden = dim_hidden
+        self.num_layers = num_layers
+        
+        if layer == 'max':
+            dslayer = PermEquiMax
+        elif layer == 'sum':
+            dslayer = PermEquiSum
+        elif layer == 'mean':
+            dslayer = PermEquiMean
+        else:
+            raise NotImplementedError
+
+        self.encoder = []
+        for i in range(num_layers):
+            if i == 0:
+                self.encoder.append(dslayer(in_dim=dim_in, out_dim=dim_hidden))
+            else:
+                self.encoder.append(dslayer(in_dim=dim_hidden, out_dim=dim_hidden))
+        self.encoder = nn.Sequential(*self.encoder)
     
-    def forward(self, X):
-        X = self.encoder(X)
-        #X, _ = X.mean(1)
-        #X = X.sum(1)
-        X, _ = X.max(1)
+    def aggregate(self, X):
+        if self.layer == 'max':
+            X, _ = X.max(dim=1)
+        elif self.layer == 'mean':
+            X = X.mean(dim=1)
+        elif self.layer == 'sum':
+            X = X.sum(dim=1)
         return X
 
-def get_st_encoder(block='sab', dim_in=2048, num_layers=2, dim_hidden=128, num_inds=16, num_outputs=1, num_heads=4, ln=True):
-    encoder = []
-    if block == 'sab':
-        encoder.append(SAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
-        for i in range(num_layers):
-            encoder.append(SAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, ln=ln))
-    elif block == 'isab':
-        encoder.append(ISAB(dim_in=dim_in, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln))
-        for i in range(num_layers):
-            encoder.append(ISAB(dim_in=dim_hidden, dim_out=dim_hidden, num_heads=num_heads, num_inds=num_inds, ln=ln))
-    else:
-        raise NotImplementedError
-    encoder.append(PMA(dim=dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln))
-    return nn.Sequential(*encoder)
-
-#class ContextMixer(nn.Module):
-#    def __init__(self, dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=2, num_heads=4, ln=True):
-#        super(ContextMixer, self).__init__()
-#        self.ln = ln
-#        self.dim_in = dim_in
-#        self.dim_in = dim_in
-#        self.num_inds = num_inds
-#        self.num_heads = num_heads
-#        self.dim_hidden = dim_hidden
-#        self.num_outputs = num_outputs
-#        
-#        #self.enc = STEncoder(block='sab', num_layers=2, dim_in=dim_in, dim_hidden=dim_hidden,  ln=ln, num_heads=num_heads)
-#        #self.enc = get_st_encoder(
-#        #        block='sab', 
-#        #        dim_in=dim_in, 
-#        #        num_outputs=num_layers, 
-#        #        dim_hidden=dim_hidden,
-#        #        num_inds=num_inds,
-#        #        num_heads=num_heads,
-#        #        ln=ln
-#        #        )
-#        self.enc = DSEncoder(dim_in=dim_in, dim_hidden=dim_hidden)
-#
-#    def forward(self, x_real, x_context):
-#        X = torch.cat([x_real.unsqueeze(1), x_context], dim=1) if x_context is not None else torch.cat([x_real.unsqueeze(1), x_real.unsqueeze(1)],
-#                                                                                                        dim=1)
-#        X = self.enc(X)
-#        return X.squeeze(1)
+    def forward(self, X):
+        X = self.encoder(X)
+        X = self.aggregate(X=X)
+        return X
 
 class ContextMixer(nn.Module):
-    def __init__(self, dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=2, num_heads=4, ln=True):
+    #def __init__(self, sencoder='dsets', layer='max', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
+    def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
         super(ContextMixer, self).__init__()
-        dim = 512
         self.r_theta_1 = nn.Sequential(
-                nn.Linear(in_features=dim_in, out_features=dim),
+                nn.Linear(in_features=dim_in, out_features=dim_proj),
                 nn.ReLU(),
-                nn.Linear(in_features=dim, out_features=dim_hidden),
+                nn.Linear(in_features=dim_proj, out_features=dim_proj),
                 nn.ReLU(),
                 )
         
         self.c_theta_1 = nn.Sequential(
-                nn.Linear(in_features=dim_in, out_features=dim),
+                nn.Linear(in_features=dim_in, out_features=dim_proj),
                 nn.ReLU(),
-                nn.Linear(in_features=dim, out_features=dim_hidden),
+                nn.Linear(in_features=dim_proj, out_features=dim_proj),
                 nn.ReLU(),
                 )
-
-        #self.se_theta = STEncoder(block='sab', num_layers=2, dim_in=dim_hidden, dim_hidden=dim_hidden,  ln=ln, num_heads=num_heads)
-        self.se_theta = DSEncoder(dim_in=dim_hidden, dim_hidden=dim_hidden)
-        self.dec = nn.Linear(dim_hidden, dim_in)
+        
+        if sencoder == 'dsets':
+            self.se_theta = DSEncoder(dim_in=dim_proj, dim_hidden=dim_proj, num_layers=num_layers, layer=layer)
+        elif sencoder == 'strans':
+            self.se_theta = STEncoder(num_layers=num_layers, dim_in=dim_proj, dim_hidden=dim_proj,  ln=ln, num_heads=num_heads)
+        else:
+            raise NotImplementedError
+        self.dec = nn.Linear(dim_proj, dim_in)
+        print(self.se_theta)
 
     def forward(self, x_real, x_context=None):
         r_theta_1 = self.r_theta_1(x_real)
