@@ -30,12 +30,13 @@ fingerprints = {
         }
 
 class ZINC(Dataset):
-    def __init__(self, fingerprint='ecfp'):
+    def __init__(self, root, fingerprint='ecfp'):
+        self.root = root
         self.fingerprint = fingerprint
         self.data = self.load_data()
 
     def load_data(self):
-        path = os.path.join('data/ZINC', self.fingerprint)
+        path = os.path.join(self.root, 'ZINC', self.fingerprint)
         filepaths = glob.glob(os.path.join(path, '*.npy'))
         return filepaths
 
@@ -164,7 +165,7 @@ def get_dataset(args):
     
     contextloader = None
     if args.mixer_phi:
-        contextset = ZINC(fingerprint=args.fingerprint)
+        contextset = ZINC(root=args.root, fingerprint=args.fingerprint)
         contextloader = DataLoader(
                 contextset,
                 batch_size=args.batch_size,
