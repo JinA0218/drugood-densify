@@ -1,4 +1,5 @@
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python main.py \
+  --root /c2/jeff/DrugDiscovery/data/ \
   --model mlp \
   --mixer_phi True \
   --optimizer adamw \
