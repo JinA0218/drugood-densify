@@ -157,6 +157,9 @@ class STEncoder(nn.Module):
         X = self.proj(X)
         return X
 
+        # X = self.encoder(X)
+        # return X.max(1).values
+
 class DSEncoder(nn.Module):
     def __init__(self, dim_in, dim_hidden, num_layers=1, layer='max'):
         super(DSEncoder, self).__init__()

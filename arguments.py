@@ -18,7 +18,7 @@ def get_arguments():
     parser.add_argument('--num_outputs', default=2, type=int, help='number of properties to predict.')
 
     parser.add_argument('--vec_type', default='count', type=str, help='bit or count vector (for Merck)')
-    parser.add_argument('--epochs', default=50, type=int, help='number of training epochs.')
+    parser.add_argument('--epochs', default=100, type=int, help='number of training epochs.')
     parser.add_argument('--optimizer', default='adamw', type=str, help='dataset used to train zoo.')
     parser.add_argument('--num_workers', default=8, type=int, help='trainloader number of workers.')
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate.')
@@ -38,7 +38,8 @@ def get_arguments():
     parser.add_argument('--mixer_phi', default=False, type=str2bool, help='use context mixer or not.')
     parser.add_argument('--outer_episodes', type=int, default=100, help='outer episodes for BO')
     parser.add_argument('--inner_episodes', type=int, default=5, help='inner episodes for BO')
-    parser.add_argument('--early_stopping_episodes', type=int, default=20, help='inner episodes for BO')
+    parser.add_argument('--n_context', type=int, default=16, help='number of context points')
+    parser.add_argument('--early_stopping_episodes', type=int, default=10, help='inner episodes for BO')
 
     args = parser.parse_args()
 
