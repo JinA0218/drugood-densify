@@ -14,22 +14,10 @@ from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 
 from setenc import ContextMixer
 import pickle
+from setenc import get_mixer
 from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
-from main import MLP, MLP2, initialize_weights, get_model
-
-split_types = {
-    'spectral': 'spectral_split',
-        'random': 'random_split',
-        'scaffold': 'scaffold_split',
-        'weight': 'mw_split',
-}
-
-fingerprints = {
-    'ecfp': 'ec_bit_fp',
-        'rdkit': 'rdkit_bit_fp',
-}
-
+from main import get_model
 
 
 class Merck(Dataset):
@@ -115,7 +103,6 @@ def get_dataset(args):
 
     g = torch.Generator()
     g.manual_seed(0)
-    shuffle = True
 
     trainloader = DataLoader(
         trainset,
@@ -125,7 +112,7 @@ def get_dataset(args):
         worker_init_fn=seed_worker,
         # generator=g,
         persistent_workers=True,
-        shuffle=shuffle,
+        shuffle=True,
         pin_memory=True
     )
     validloader = DataLoader(
@@ -222,7 +209,6 @@ class Trainer:
         # print(f"regular loss: {y.size()=} {y_hat.size()=}")
         return F.mse_loss(y.cuda().squeeze(), y_hat.cuda().squeeze())
 
-
     def test(self, dataloader, mixer_phi=None):
         self.model.eval()
         self.optimizer.eval()
@@ -240,8 +226,6 @@ class Trainer:
 
                 # y_hat = y_hat[:, 0]
                 # print(f"in test: {y.size()=} {y_hat.size()=}")
-                # y = self.trainloader.dataset.dataset.denormalize(y)
-                # y_hat = self.trainloader.dataset.dataset.denormalize(y_hat)
 
                 loss = self.calc_loss(y_hat, y, test=True)
                 losses.append(loss.item() * y_hat.size(0))
@@ -285,7 +269,7 @@ class Trainer:
 
             # 2. Pass unmixed sample through model
             # y_hat = model(x=x, context=None, mixer_phi=mixer_phi)
-            # loss = loss + F.cross_entropy(y_hat, y, weight=self.trainloader.dataset.classweights.to(self.args.device))
+            # loss = loss + self.calc_loss(y_hat.squeeze(), y.squeeze())
 
             if optimizer is not None:
                 optimizer.zero_grad()
@@ -303,7 +287,6 @@ class Trainer:
         trainloader = InfIterator(self.trainloader)
         validloader = InfIterator(self.validloader)
         contextloader = InfIterator(self.contextloader)
-        # validloader = InfIterator(self.trainloader)
 
         self.optimizermixer.train()
         for episode in tqdm(range(self.args.outer_episodes), ncols=75, leave=False):
@@ -311,6 +294,7 @@ class Trainer:
             for k in tqdm(range(self.args.inner_episodes), ncols=75, leave=False):
                 x, y = next(trainloader)
                 context, _ = next(contextloader)
+                context = context.reshape(self.args.batch_size, -1, context.size(-1))
 
                 train_loss = train_mixer(model=self.model, optimizer=self.optimizer, mixer_phi=self.mixer_phi, \
                                          x=x, y=y, context=context, device=self.args.device, interp_loss=True)
@@ -319,13 +303,14 @@ class Trainer:
             # Compute hypergradients
             x_t, y_t = next(trainloader)  # self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
             context_t, _ = next(contextloader)
+            context_t = context_t.reshape(self.args.batch_size, -1, context.size(-1))
             L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                               context=context_t, device=self.args.device)
 
-            # self.model.eval()
-            # self.mixer_phi.eval()
+            self.model.eval()
+            self.mixer_phi.eval()
             # x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
-            x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+            x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
 
             context_v = None
             y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
@@ -485,7 +470,8 @@ if __name__ == '__main__':
         if i > 0:
             set_seed(i)
         print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
-        model, mixer_phi = get_model(args=args)
+        model = get_model(args=args)
+        mixer_phi = get_mixer(args=args)
 
         optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd)
         optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)

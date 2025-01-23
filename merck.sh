@@ -1,22 +1,22 @@
 CUDA_VISIBLE_DEVICES=5 PYTHONPATH=. python main_merck.py \
-  --model mlp2 \
+  --model mlp \
   --mixer_phi True \
   --optimizer adamwschedulefree \
   --seed 42 \
-  --lr 5e-4 \
-  --wd 1e-5 \
-  --clr 5e-4 \
-  --cwd 1e-5 \
+  --lr 1e-3 \
+  --wd 0.0 \
+  --clr 1e-5 \
+  --cwd 5e-4 \
   --dropout 0.5 \
-  --num_layers 2 \
+  --num_layers 1 \
   --hidden_dim 32 \
-  --batch_size 128 \
+  --batch_size 64 \
   --batchnorm False \
   --outer_episodes 500 \
   --inner_episodes 10 \
   --initialize_weights False \
   --early_stopping_episodes 10 \
-  --n_context 4 \
+  --n_context 1 \
   --in_features 6560 \
   --num_outputs 1 \
   --vec_type count \
