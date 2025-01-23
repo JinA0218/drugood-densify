@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=5 PYTHONPATH=. python main_merck.py \
+CUDA_VISIBLE_DEVICES=2 PYTHONPATH=. python main_merck.py \
   --model mlp2 \
   --mixer_phi True \
   --optimizer adamwschedulefree \
@@ -16,7 +16,7 @@ CUDA_VISIBLE_DEVICES=5 PYTHONPATH=. python main_merck.py \
   --inner_episodes 10 \
   --initialize_weights False \
   --early_stopping_episodes 100 \
-  --n_context 1 \
+  --n_context 4 \
   --in_features 6560 \
   --num_outputs 1 \
   --vec_type count \

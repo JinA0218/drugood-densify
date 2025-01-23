@@ -199,19 +199,24 @@ class Trainer:
 
     def calc_loss(self, y_hat, y, test=False):
         if len(y_hat.size()) > 1:
+
             raise ValueError(f"sizes should not happen: {y_hat.size()=} {y.size()=}")
+            y_hat_real = y_hat[:, 0]
+            loss = F.mse_loss(y, y_hat_real)
+
+            y_hat_unlabeled = y_hat[:, 1:].reshape(-1)
+            mu = y_hat_unlabeled.mean()
+            var = y_hat_unlabeled.var()
+            logvar = var.log()
+
+            kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - var)
+            # print(f"{loss=} {kl=}")
+            loss += 0.01 * kl
+            return loss
+
+        # print(f"regular loss: {y.size()=} {y_hat.size()=}")
         return F.mse_loss(y.cuda().squeeze(), y_hat.cuda().squeeze())
 
-        # y_hat_real = y_hat[:, 0]
-        # loss = F.mse_loss(y, y_hat_real)
-
-        # y_hat_unlabeled = y_hat[:, 1:].reshape(-1)
-        # mu = y_hat_unlabeled.mean()
-        # logvar = y_hat_unlabeled.var().log()
-
-        # kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        # loss += 0.01 * kl
-        # return loss
 
     def test(self, dataloader, mixer_phi=None):
         self.model.eval()
@@ -227,6 +232,9 @@ class Trainer:
 
                 y = y.cuda().squeeze()
                 y_hat = y_hat.cuda().squeeze()
+
+                # y_hat = y_hat[:, 0]
+                # print(f"in test: {y.size()=} {y_hat.size()=}")
                 # y = self.trainloader.dataset.dataset.denormalize(y)
                 # y_hat = self.trainloader.dataset.dataset.denormalize(y_hat)
 
@@ -288,7 +296,8 @@ class Trainer:
         self.best_mse_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
 
         trainloader = InfIterator(self.trainloader)
-        # validloader = InfIterator(self.validloader)
+        validloader = InfIterator(self.validloader)
+        # validloader = InfIterator(self.trainloader)
 
         self.optimizermixer.train()
         for episode in tqdm(range(self.args.outer_episodes), ncols=75, leave=False):
@@ -307,17 +316,23 @@ class Trainer:
             L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                               context=context_t, device=self.args.device)
 
-            # self.model.eval()
-            # self.mixer_phi.eval()
-            # x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
-            x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+            self.model.eval()
+            self.mixer_phi.eval()
+            x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+            # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
 
             context_v = None  # self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
+            # context_v = self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
             y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
 
+            # y_v_hat = y_v_hat[:, 0]
             L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
 
-            hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=self.model.parameters, i=5, alpha=self.args.lr)
+            def w():
+                return [p for n, p in self.model.named_parameters() if "mlp_theta_c" not in n]
+                # return self.model.parameters()
+
+            hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=w, i=5, alpha=self.args.lr)
 
             self.optimizermixer.zero_grad()
             for p, g in zip(self.mixer_phi.parameters(), hgrads):
@@ -458,6 +473,7 @@ if __name__ == '__main__':
                 with open(f"{path}/{dataset}-{featurization}-{hyper_key}.pkl", "wb") as f:
                     pickle.dump({"mse": vmse, **hypers}, f)
 
+    losses = []
     for i in range(10):
         set_seed(i)
         trainloader, validloader, testloader, contextloader = get_dataset(args=args)
@@ -479,4 +495,7 @@ if __name__ == '__main__':
                           )
 
         _, tmse = trainer.fit()
-        exit("do something with the final tmse here, save it in a file with the mean and std error")
+        losses.append(tmse)
+
+    l = np.array(losses)
+    print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
