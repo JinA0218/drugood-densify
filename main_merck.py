@@ -71,19 +71,12 @@ class Merck(Dataset):
         self.sigma = torch.tensor(sigma)
         print(f"{self.mu.item()=} {self.sigma.item()=}")
 
-        # perm = torch.randperm(data.size(0))
-        # return data[perm], labels[perm]
         return data, labels
 
     def denormalize(self, y):
         return y * self.sigma + self.mu
 
     def __getitem__(self, index):
-        if self.is_context:
-            # print("WARNING: do we need to permute things here?")
-            data = self.data[index * self.batchsize: (index + 1) * self.batchsize]
-            return data
-
         if self.vec_type == "count":
             return self.data[index], self.labels[index]
         elif self.vec_type == "bit":
@@ -92,8 +85,6 @@ class Merck(Dataset):
             raise NotImplementedError()
 
     def __len__(self):
-        if self.is_context:
-            return len(self.data) // self.batchsize
         return len(self.data)
 
 
@@ -124,7 +115,7 @@ def get_dataset(args):
 
     g = torch.Generator()
     g.manual_seed(0)
-    shuffle=False
+    shuffle = True
 
     trainloader = DataLoader(
         trainset,
@@ -132,9 +123,9 @@ def get_dataset(args):
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         worker_init_fn=seed_worker,
-            # generator=g,
-            shuffle=shuffle,
-            pin_memory=True
+        # generator=g,
+        shuffle=shuffle,
+        pin_memory=True
     )
     validloader = DataLoader(
         validset,
@@ -142,9 +133,9 @@ def get_dataset(args):
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         worker_init_fn=seed_worker,
-            # generator=g,
-            shuffle=False,
-            pin_memory=True
+        # generator=g,
+        shuffle=False,
+        pin_memory=True
     )
 
     testloader = DataLoader(testset, \
@@ -156,8 +147,18 @@ def get_dataset(args):
 
     contextloader = None
     if args.mixer_phi:
-        contextloader = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=True, batchsize=args.batch_size * args.n_context)
-        contextloader.data = contextloader.data / m
+        contextset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=True)
+        contextset.data = contextset.data / m
+        contextloader = DataLoader(
+            contextset,
+            batch_size=args.batch_size * args.n_context,
+            drop_last=True,
+            num_workers=args.num_workers,
+            worker_init_fn=seed_worker,
+                # generator=g,
+                shuffle=True,
+                pin_memory=True
+        )
     return trainloader, validloader, testloader, contextloader
 
 
@@ -297,6 +298,7 @@ class Trainer:
 
         trainloader = InfIterator(self.trainloader)
         validloader = InfIterator(self.validloader)
+        contextloader = InfIterator(self.contextloader)
         # validloader = InfIterator(self.trainloader)
 
         self.optimizermixer.train()
@@ -304,7 +306,7 @@ class Trainer:
             tlosses = []
             for k in tqdm(range(self.args.inner_episodes), ncols=75, leave=False):
                 x, y = next(trainloader)
-                context = self.contextloader[torch.randperm(len(self.contextloader))[0]]
+                context, _ = next(contextloader)
 
                 train_loss = train_mixer(model=self.model, optimizer=self.optimizer, mixer_phi=self.mixer_phi, \
                                          x=x, y=y, context=context, device=self.args.device, interp_loss=True)
@@ -312,17 +314,16 @@ class Trainer:
 
             # Compute hypergradients
             x_t, y_t = next(trainloader)  # self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
-            context_t = self.contextloader[torch.randperm(len(self.contextloader))[0]]
+            context_t, _ = next(contextloader)
             L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                               context=context_t, device=self.args.device)
 
-            self.model.eval()
-            self.mixer_phi.eval()
+            # self.model.eval()
+            # self.mixer_phi.eval()
             x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
             # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
 
-            context_v = None  # self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
-            # context_v = self.contextloader[torch.randperm(len(self.contextloader))[0]].to(self.args.device)
+            context_v = None
             y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
 
             # y_v_hat = y_v_hat[:, 0]
@@ -474,7 +475,7 @@ if __name__ == '__main__':
                     pickle.dump({"mse": vmse, **hypers}, f)
 
     losses = []
-    for i in range(10):
+    for i in range(1):
         set_seed(i)
         trainloader, validloader, testloader, contextloader = get_dataset(args=args)
         print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
@@ -483,6 +484,8 @@ if __name__ == '__main__':
         optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd)
         optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
 
+        # from torch.profiler import profile, record_function, ProfilerActivity
+        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
         trainer = Trainer(model=model.to(args.device), \
                           mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
                           optimizer=optimizer, \
@@ -496,6 +499,8 @@ if __name__ == '__main__':
 
         _, tmse = trainer.fit()
         losses.append(tmse)
+
+        # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=1000))
 
     l = np.array(losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
