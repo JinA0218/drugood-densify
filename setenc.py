@@ -200,10 +200,8 @@ class DSEncoder(nn.Module):
         return X
 
 class ContextMixer(nn.Module):
-    #def __init__(self, sencoder='dsets', layer='max', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
-    # def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4,
-    def __init__(self, sencoder='dsets', layer='max', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4,
-                 dim_proj=512, ln=True):
+    # def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
+    def __init__(self, sencoder='dsets', layer='max', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
         super(ContextMixer, self).__init__()
         self.r_theta_1 = nn.Sequential(
                 nn.Linear(in_features=dim_in, out_features=dim_proj),

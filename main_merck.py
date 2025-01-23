@@ -295,6 +295,9 @@ class Trainer:
                 x, y = next(trainloader)
                 context, _ = next(contextloader)
                 context = context.reshape(self.args.batch_size, -1, context.size(-1))
+                if args.n_context > 1:
+                    n = torch.randint(1, context.size(1), size=(1,)).item()
+                    context = context[:, :n]
 
                 train_loss = train_mixer(model=self.model, optimizer=self.optimizer, mixer_phi=self.mixer_phi, \
                                          x=x, y=y, context=context, device=self.args.device, interp_loss=True)
@@ -303,7 +306,11 @@ class Trainer:
             # Compute hypergradients
             x_t, y_t = next(trainloader)  # self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
             context_t, _ = next(contextloader)
-            context_t = context_t.reshape(self.args.batch_size, -1, context.size(-1))
+            context_t = context_t.reshape(self.args.batch_size, -1, context_t.size(-1))
+            if args.n_context > 1:
+                n = torch.randint(1, context_t.size(1), size=(1,)).item()
+                context_t = context_t[:, :n]
+
             L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                               context=context_t, device=self.args.device)
 

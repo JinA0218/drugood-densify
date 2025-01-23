@@ -16,7 +16,7 @@ CUDA_VISIBLE_DEVICES=5 PYTHONPATH=. python main_merck.py \
   --inner_episodes 10 \
   --initialize_weights False \
   --early_stopping_episodes 10 \
-  --n_context 1 \
+  --n_context 4 \
   --in_features 6560 \
   --num_outputs 1 \
   --vec_type count \
