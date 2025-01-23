@@ -124,6 +124,7 @@ def get_dataset(args):
         num_workers=args.num_workers,
         worker_init_fn=seed_worker,
         # generator=g,
+        persistent_workers=True,
         shuffle=shuffle,
         pin_memory=True
     )
@@ -133,6 +134,7 @@ def get_dataset(args):
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         worker_init_fn=seed_worker,
+        persistent_workers=True,
         # generator=g,
         shuffle=False,
         pin_memory=True
@@ -141,6 +143,7 @@ def get_dataset(args):
     testloader = DataLoader(testset, \
                             batch_size=args.batch_size, \
                             num_workers=args.num_workers, \
+                            persistent_workers=True,
                             worker_init_fn=seed_worker, \
                             # generator=g,
                             shuffle=False, pin_memory=True)
@@ -154,6 +157,7 @@ def get_dataset(args):
             batch_size=args.batch_size * args.n_context,
             drop_last=True,
             num_workers=args.num_workers,
+            persistent_workers=True,
             worker_init_fn=seed_worker,
                 # generator=g,
                 shuffle=True,
@@ -320,8 +324,8 @@ class Trainer:
 
             # self.model.eval()
             # self.mixer_phi.eval()
+            # x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
             x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
-            # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
 
             context_v = None
             y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
@@ -355,7 +359,7 @@ class Trainer:
                 self.best_mse_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
             else:
                 episodes_without_improvement += 1
-                if episodes_without_improvement == self.args.early_stopping_episodes:
+                if episodes_without_improvement >= self.args.early_stopping_episodes and episode > int(self.args.outer_episodes * 0.1):
                     break
 
     def fit(self):
@@ -475,17 +479,17 @@ if __name__ == '__main__':
                     pickle.dump({"mse": vmse, **hypers}, f)
 
     losses = []
-    for i in range(1):
-        set_seed(i)
-        trainloader, validloader, testloader, contextloader = get_dataset(args=args)
+    set_seed(0)
+    trainloader, validloader, testloader, contextloader = get_dataset(args=args)
+    for i in range(10):
+        if i > 0:
+            set_seed(i)
         print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
         model, mixer_phi = get_model(args=args)
 
         optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd)
         optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
 
-        # from torch.profiler import profile, record_function, ProfilerActivity
-        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
         trainer = Trainer(model=model.to(args.device), \
                           mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
                           optimizer=optimizer, \
@@ -500,7 +504,9 @@ if __name__ == '__main__':
         _, tmse = trainer.fit()
         losses.append(tmse)
 
-        # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=1000))
-
     l = np.array(losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
+    trainloader._iterator._shutdown_workers()
+    validloader._iterator._shutdown_workers()
+    testloader._iterator._shutdown_workers()
+    contextloader._iterator._shutdown_workers()
