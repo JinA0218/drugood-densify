@@ -45,7 +45,6 @@ class Merck(Dataset):
 
         data = [torch.cat((d, torch.zeros(d.size(0), max_dim - d.size(1))), dim=1) for d in data]
         data = torch.cat(data, dim=0)
-        print(f"{data.size()=}")
         data, labels = data[:, 1:], data[:, 0]
 
         data = torch.exp(data) - 1
@@ -57,7 +56,7 @@ class Merck(Dataset):
         mu, sigma = stats[0][1:3]
         self.mu = torch.tensor(mu)
         self.sigma = torch.tensor(sigma)
-        print(f"{self.mu.item()=} {self.sigma.item()=}")
+        # print(f"{self.mu.item()=} {self.sigma.item()=}")
 
         return data, labels
 
@@ -68,7 +67,7 @@ class Merck(Dataset):
         if self.vec_type == "count":
             return self.data[index], self.labels[index]
         elif self.vec_type == "bit":
-            return (self.data[index] > 0).float(), self.labels[index]
+            return (self.data[index] > 1e-2).float(), self.labels[index]
         else:
             raise NotImplementedError()
 
@@ -84,22 +83,53 @@ def seed_worker(worker_id):
 
 def get_dataset(args):
     trainset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
-    validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
-
     train_idx = np.load(f"data/perms/train-idx-{args.dataset}.npy")
-    val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
-
     trainset.data = trainset.data[train_idx]
     trainset.labels = trainset.labels[train_idx]
+
+    # validset for model selection
+    validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+    val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
     validset.data = validset.data[val_idx]
     validset.labels = validset.labels[val_idx]
 
     testset = Merck(split="test", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
 
+    # validset for outer loop
+    mvalidset = None
+    for dataset in [d for d in ["hivprot", "dpp4", "nk1"] if d != args.dataset]:
+        _validset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False)
+        # val_idx = np.load(f"data/perms/val-idx-{dataset}.npy")
+        # _validset.data = _validset.data[val_idx]
+        # _validset.labels = _validset.labels[val_idx]
+        if mvalidset is None:
+            mvalidset = _validset
+            continue
+
+        mvalidset.data = torch.cat((mvalidset.data, _validset.data), dim=0)
+        mvalidset.labels = torch.cat((mvalidset.labels, _validset.labels), dim=0)
+
+    # import copy
+    # validset = copy.deepcopy(mvalidset)
+    # perm = np.random.permutation(validset.data.shape[0])
+    # n = int(0.9 * validset.data.shape[0])
+    # train_idx, val_idx = perm[:n], perm[n:]
+
+    # mvalidset.data = mvalidset.data[train_idx]
+    # mvalidset.labels = mvalidset.labels[train_idx]
+    # validset.data = validset.data[val_idx]
+    # validset.labels = validset.labels[val_idx]
+
     m = trainset.data.amax()
     trainset.data = trainset.data / m
     validset.data = validset.data / m
+    mvalidset.data = mvalidset.data / m
     testset.data = testset.data / m
+
+    print(f"{trainset.data.shape=} {trainset.labels.shape=}")
+    print(f"{validset.data.shape=} {validset.labels.shape=}")
+    print(f"{mvalidset.data.shape=} {mvalidset.labels.shape=}")
+    print(f"{testset.data.shape=} {testset.labels.shape=}")
 
     g = torch.Generator()
     g.manual_seed(0)
@@ -127,6 +157,18 @@ def get_dataset(args):
         pin_memory=True
     )
 
+    mvalidloader = DataLoader(
+        mvalidset,
+        drop_last=True,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        worker_init_fn=seed_worker,
+        persistent_workers=True,
+        # generator=g,
+        shuffle=True,
+        pin_memory=True
+    )
+
     testloader = DataLoader(testset, \
                             batch_size=args.batch_size, \
                             num_workers=args.num_workers, \
@@ -150,7 +192,7 @@ def get_dataset(args):
                 shuffle=True,
                 pin_memory=True
         )
-    return trainloader, validloader, testloader, contextloader
+    return trainloader, validloader, mvalidloader, testloader, contextloader
 
 
 class Trainer:
@@ -162,6 +204,7 @@ class Trainer:
         testloader=None,
         trainloader=None,
         validloader=None,
+        mvalidloader=None,
         contextloader=None,
         optimizermixer=None,
         args=None,
@@ -173,6 +216,7 @@ class Trainer:
         self.testloader = testloader
         self.trainloader = trainloader
         self.validloader = validloader
+        self.mvalidloader = mvalidloader
         self.mixer_phi = mixer_phi
         self.contextloader = contextloader
         self.optimizermixer = optimizermixer
@@ -285,7 +329,7 @@ class Trainer:
         self.best_mse_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
 
         trainloader = InfIterator(self.trainloader)
-        validloader = InfIterator(self.validloader)
+        mvalidloader = InfIterator(self.mvalidloader)
         contextloader = InfIterator(self.contextloader)
 
         self.optimizermixer.train()
@@ -314,10 +358,10 @@ class Trainer:
             L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                               context=context_t, device=self.args.device)
 
-            self.model.eval()
-            self.mixer_phi.eval()
-            # x_v, y_v = next(validloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
-            x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+            # self.model.eval()
+            # self.mixer_phi.eval()
+            x_v, y_v = next(mvalidloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+            # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
 
             context_v = None
             y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
@@ -334,7 +378,7 @@ class Trainer:
             self.optimizermixer.zero_grad()
             for p, g in zip(self.mixer_phi.parameters(), hgrads):
                 hypergrad = torch.clamp(g, -5.0, 5.0)
-                hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
+                # hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
                 p.grad = hypergrad
             self.optimizermixer.step()
 
@@ -472,7 +516,8 @@ if __name__ == '__main__':
 
     losses = []
     set_seed(0)
-    trainloader, validloader, testloader, contextloader = get_dataset(args=args)
+    trainloader, validloader, mvalidloader, testloader, contextloader = get_dataset(args=args)
+
     for i in range(10):
         if i > 0:
             set_seed(i)
@@ -489,6 +534,7 @@ if __name__ == '__main__':
                           optimizermixer=optimizermixer, \
                           trainloader=trainloader, \
                           validloader=validloader, \
+                          mvalidloader=mvalidloader, \
                           contextloader=contextloader, \
                           testloader=testloader, \
                           args=args,
@@ -497,8 +543,12 @@ if __name__ == '__main__':
         _, tmse = trainer.fit()
         losses.append(tmse)
 
+    dev = os.environ["CUDA_VISIBLE_DEVICES"]
     l = np.array(losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
+    with open(f"./experiments/results-{dev}.txt", "a+") as f:
+        f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n\n")
+
     trainloader._iterator._shutdown_workers()
     validloader._iterator._shutdown_workers()
     testloader._iterator._shutdown_workers()
