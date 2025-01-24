@@ -1,18 +1,14 @@
 import os
-import glob
+import copy
 import torch
 import random
 import numpy as np
 import itertools
 from tqdm import tqdm
-import torch.nn as nn
 from copy import deepcopy
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-from sklearn.utils.class_weight import compute_class_weight
-from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 
-from setenc import ContextMixer
 import pickle
 from setenc import get_mixer
 from arguments import get_arguments
@@ -81,17 +77,32 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 
-def get_dataset(args):
+def get_dataset(args, test=False):
+    print(f"{args.dataset=} {args.vec_type=}")
     trainset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
-    train_idx = np.load(f"data/perms/train-idx-{args.dataset}.npy")
-    trainset.data = trainset.data[train_idx]
-    trainset.labels = trainset.labels[train_idx]
 
-    # validset for model selection
-    validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
-    val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
-    validset.data = validset.data[val_idx]
-    validset.labels = validset.labels[val_idx]
+    if test:
+        # if testing, just copy the trainset since we will take the last model no matter what
+        validset = copy.deepcopy(trainset)
+        perm = np.random.permutation(validset.data.shape[0])
+
+        # make it small so we don't waste too much calculation
+        n = int(perm.shape[0] * 0.1)
+        idx = perm[:n]
+
+        validset.data = validset.data[idx]
+        validset.labels = validset.labels[idx]
+    else:
+        # if we are not testing, then we are tuning hyperparameters. In this case, we should
+        # split the train set into a validation set for hyperparameter selection
+        train_idx = np.load(f"data/perms/train-idx-{args.dataset}.npy")
+        trainset.data = trainset.data[train_idx]
+        trainset.labels = trainset.labels[train_idx]
+
+        validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+        val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
+        validset.data = validset.data[val_idx]
+        validset.labels = validset.labels[val_idx]
 
     testset = Merck(split="test", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
 
@@ -99,26 +110,12 @@ def get_dataset(args):
     mvalidset = None
     for dataset in [d for d in ["hivprot", "dpp4", "nk1"] if d != args.dataset]:
         _validset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False)
-        # val_idx = np.load(f"data/perms/val-idx-{dataset}.npy")
-        # _validset.data = _validset.data[val_idx]
-        # _validset.labels = _validset.labels[val_idx]
         if mvalidset is None:
             mvalidset = _validset
             continue
 
         mvalidset.data = torch.cat((mvalidset.data, _validset.data), dim=0)
         mvalidset.labels = torch.cat((mvalidset.labels, _validset.labels), dim=0)
-
-    # import copy
-    # validset = copy.deepcopy(mvalidset)
-    # perm = np.random.permutation(validset.data.shape[0])
-    # n = int(0.9 * validset.data.shape[0])
-    # train_idx, val_idx = perm[:n], perm[n:]
-
-    # mvalidset.data = mvalidset.data[train_idx]
-    # mvalidset.labels = mvalidset.labels[train_idx]
-    # validset.data = validset.data[val_idx]
-    # validset.labels = validset.labels[val_idx]
 
     m = trainset.data.amax()
     trainset.data = trainset.data / m
@@ -390,14 +387,14 @@ class Trainer:
 
             if vmse < best_vmse:
                 best_vmse = vmse
-                episodes_without_improvement = 0
+                # episodes_without_improvement = 0
                 self.best_mse_valid_state_dict_model = deepcopy(self.model.state_dict())
                 self.best_mse_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
-            else:
-                episodes_without_improvement += 1
-                # if episodes_without_improvement >= self.args.early_stopping_episodes and episode > int(self.args.outer_episodes * 0.1):
-                if episodes_without_improvement >= self.args.early_stopping_episodes and episode > 50:
-                    break
+            # else:
+            #     episodes_without_improvement += 1
+            #     # if episodes_without_improvement >= self.args.early_stopping_episodes and episode > int(self.args.outer_episodes * 0.1):
+            #     if episodes_without_improvement >= self.args.early_stopping_episodes and episode > args.outer_episodes:
+            #         break
 
     def fit(self):
         if self.mixer_phi is None:
@@ -443,8 +440,7 @@ class Trainer:
 if __name__ == '__main__':
     args = get_arguments()
 
-    do_hyper_search = False
-    if do_hyper_search:
+    if os.environ.get("HYPER_SWEEP", "0") == "1":
         datasets = ["hivprot", "dpp4", "nk1"]
         featurizations = ["count", "bit"]
 
@@ -452,13 +448,13 @@ if __name__ == '__main__':
 
         hyper_grid = {
             "lr": [1e-3, 1e-4],
-            "clr": [1e-3, 1e-4],
-            "num_layers": [2, 4],
+            "clr": [1e-5],
+            "num_layers": [3, 4],
             "hidden_dim": [32, 64],
-            "ctx_points": [1, 8, 16, 32],
-            "dropout": [0.2, 0.5],
-            "inner_episodes": [20, 50],
-            "outer_episodes": [30, 50],
+            "n_context": [1, 4, 8],
+            "dropout": [0.5],
+            "inner_episodes": [10],
+            "outer_episodes": [50],
         }
 
         hyper_map = {
@@ -467,36 +463,40 @@ if __name__ == '__main__':
                     "clr": clr,
                     "num_layers": num_layers,
                     "hidden_dim": hidden_dim,
-                    "ctx_points": ctx_points,
+                    "n_context": n_context,
                     "dropout": dropout,
                     "inner_episodes": inner_episodes,
                     "outer_episodes": outer_episodes,
-                } for i, (lr, clr, num_layers, hidden_dim, ctx_points, dropout, inner_episodes, outer_episodes) \
+                } for i, (lr, clr, num_layers, hidden_dim, n_context, dropout, inner_episodes, outer_episodes) \
                         in enumerate(itertools.product(*[hyper_grid[k] for k in hyper_grid.keys()]))
         }
 
-        print(f"{arg_map=}")
-        print(f"{hyper_map=}")
-        exit()
+        # print(f"{arg_map=}")
+        # print(f"{hyper_map=}")
+        # exit()
 
         path = "experiments/hyper_search"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
+            dataset, featurization = arg_map[arg_key]
+            args.dataset = dataset
+            args.vec_type = featurization
+
+            set_seed(10)
+            trainloader, validloader, mvalidloader, testloader, contextloader = get_dataset(args=args, test=False)
+            print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
             for hyper_key in range(int(os.environ["START"]), int(os.environ["STOP"])):
-                dataset, featurization = arg_map[arg_key]
-                args.dataset = dataset
-                args.vec_type = featurization
 
                 hypers = hyper_map[hyper_key]
+                print(f"running with hypers: {hypers=}")
                 for k, v in hypers.items():
                     setattr(args, k, v)
 
                 set_seed(10)
-                trainloader, validloader, testloader, contextloader = get_dataset(args=args)
-                print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
-                model, mixer_phi = get_model(args=args)
 
+                model = get_model(args=args)
+                mixer_phi = get_mixer(args=args)
                 optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd)
                 optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
 
@@ -506,19 +506,62 @@ if __name__ == '__main__':
                                   optimizermixer=optimizermixer, \
                                   trainloader=trainloader, \
                                   validloader=validloader, \
+                                  mvalidloader=mvalidloader, \
                                   contextloader=contextloader, \
                                   testloader=testloader, \
                                   args=args,
                                   )
 
-                vmse, _ = trainer.fit()
+                _, _, vmse, _ = trainer.fit()
                 with open(f"{path}/{dataset}-{featurization}-{hyper_key}.pkl", "wb") as f:
                     pickle.dump({"mse": vmse, **hypers}, f)
 
+        exit("exiting after hyperparameter sweep")
+
     losses = []
     last_losses = []
+
+    best_hypers = {
+        ("hivprot", "count"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50
+        },
+        ("hivprot", "bit"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50
+        },
+        ("dpp4", "count"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50
+        },
+        ("dpp4", "bit"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50
+        },
+        ("nk1", "count"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50
+        },
+        ("nk1", "bit"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50
+        },
+    }
+
+    hyperparams = best_hypers[(args.dataset, args.vec_type)]
+    for k, v in hyperparams.items():
+        setattr(args, k, v)
+
+    print(f"running {args.dataset=} {args.vec_type=} with params: {hyperparams}")
+
     set_seed(0)
-    trainloader, validloader, mvalidloader, testloader, contextloader = get_dataset(args=args)
+    trainloader, validloader, mvalidloader, testloader, contextloader = get_dataset(args=args, test=True)
 
     for i in range(10):
         if i > 0:
@@ -550,10 +593,10 @@ if __name__ == '__main__':
     l = np.array(losses)
     ll = np.array(last_losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
-    with open(f"./experiments/results-{dev}.txt", "a+") as f:
-        f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} ")
-        f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
-        f.write(f"mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
+    with open(f"./experiments/results-{dev}.txt", "a+") as _f:
+        _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr}\n")
+        _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
+        _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
 
     trainloader._iterator._shutdown_workers()
     validloader._iterator._shutdown_workers()
