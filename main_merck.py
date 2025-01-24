@@ -395,7 +395,8 @@ class Trainer:
                 self.best_mse_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
             else:
                 episodes_without_improvement += 1
-                if episodes_without_improvement >= self.args.early_stopping_episodes and episode > int(self.args.outer_episodes * 0.1):
+                # if episodes_without_improvement >= self.args.early_stopping_episodes and episode > int(self.args.outer_episodes * 0.1):
+                if episodes_without_improvement >= self.args.early_stopping_episodes and episode > 50:
                     break
 
     def fit(self):
@@ -425,9 +426,9 @@ class Trainer:
         # Run model on test set.
         print('{} {}'.format(self.args.dataset, self.args.vec_type))
 
-        tmse = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
-        vmse = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
-        print('(Last Model) Vmse {:.3f} Tmse: {:.3f}'.format(vmse, tmse))
+        ltmse = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
+        lvmse = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
+        print('(Last Model) Vmse {:.3f} Tmse: {:.3f}'.format(lvmse, ltmse))
 
         self.model.load_state_dict(self.best_mse_valid_state_dict_model)
         if self.mixer_phi is not None:
@@ -436,7 +437,7 @@ class Trainer:
         vmse = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
         tmse = self.test(dataloader=self.testloader, mixer_phi=self.mixer_phi)
         print('(Best MSE) Vmse {:.3f} Tmse: {:.3f}'.format(vmse, tmse))
-        return vmse, tmse
+        return vmse, tmse, lvmse, ltmse
 
 
 if __name__ == '__main__':
@@ -515,6 +516,7 @@ if __name__ == '__main__':
                     pickle.dump({"mse": vmse, **hypers}, f)
 
     losses = []
+    last_losses = []
     set_seed(0)
     trainloader, validloader, mvalidloader, testloader, contextloader = get_dataset(args=args)
 
@@ -540,14 +542,18 @@ if __name__ == '__main__':
                           args=args,
                           )
 
-        _, tmse = trainer.fit()
+        _, tmse, _, ltmse = trainer.fit()
         losses.append(tmse)
+        last_losses.append(ltmse)
 
     dev = os.environ["CUDA_VISIBLE_DEVICES"]
     l = np.array(losses)
+    ll = np.array(last_losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
     with open(f"./experiments/results-{dev}.txt", "a+") as f:
-        f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n\n")
+        f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} ")
+        f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
+        f.write(f"mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
 
     trainloader._iterator._shutdown_workers()
     validloader._iterator._shutdown_workers()

@@ -106,19 +106,19 @@ do
           --optimizer adamwschedulefree \
           --seed 42 \
           --lr 1e-3 \
-          --wd 1e-3 \
+          --wd 1e-4 \
           --clr 1e-5 \
           --cwd 1e-3 \
           --dropout 0.5 \
-          --num_layers 1 \
+          --num_layers 3 \
           --hidden_dim 32 \
           --batch_size 64 \
           --batchnorm False \
-          --outer_episodes 500 \
+          --outer_episodes 50 \
           --inner_episodes 10 \
           --initialize_weights False \
           --early_stopping_episodes 10 \
-          --n_context 4 \
+          --n_context 8 \
           --in_features 6560 \
           --num_outputs 1 \
           --vec_type $vt \
