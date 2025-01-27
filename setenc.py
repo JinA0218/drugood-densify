@@ -67,10 +67,9 @@ class MAB(nn.Module):
         K_ = torch.cat(K.split(dim_split, 2), 0)
         V_ = torch.cat(V.split(dim_split, 2), 0)
 
-        #A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V), 2)
-        A = torch.sigmoid(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V))
-        #A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(dim_split), 2)
-        #A = F.dropout(A, p=0.2, training=self.training)
+        A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V), 2)
+        # A = torch.sigmoid(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V))
+        A = F.dropout(A, p=0.5, training=self.training)
         O = torch.cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
         O = O if getattr(self, 'ln0', None) is None else self.ln0(O)
         O = O + F.relu(self.fc_o(O))
@@ -200,8 +199,7 @@ class DSEncoder(nn.Module):
         return X
 
 class ContextMixer(nn.Module):
-    # def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
-    def __init__(self, sencoder='dsets', layer='max', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
+    def __init__(self, sencoder='strans', layer='pma', dim_in=2048, dim_hidden=128, num_inds=16, num_outputs=1, num_layers=1, num_heads=4, dim_proj=512, ln=True):
         super(ContextMixer, self).__init__()
         self.r_theta_1 = nn.Sequential(
                 nn.Linear(in_features=dim_in, out_features=dim_proj),
@@ -218,8 +216,10 @@ class ContextMixer(nn.Module):
                 )
         
         if sencoder == 'dsets':
+            print("loading deepsets")
             self.se_theta = DSEncoder(dim_in=dim_proj, dim_hidden=dim_proj, num_layers=num_layers, layer=layer)
         elif sencoder == 'strans':
+            print("loading set transformer")
             self.se_theta = STEncoder(num_layers=num_layers, dim_in=dim_proj, dim_hidden=dim_proj,  ln=ln, num_heads=num_heads)
         else:
             raise NotImplementedError
@@ -234,4 +234,11 @@ class ContextMixer(nn.Module):
         return x_rc
 
 def get_mixer(args):
-    return ContextMixer(dim_in=args.hidden_dim, dim_hidden=args.hidden_dim, num_outputs=args.num_outputs, ln=args.ln)
+    return ContextMixer(
+        sencoder=args.sencoder,
+        layer=args.sencoder_layer,
+        dim_in=args.hidden_dim,
+        dim_hidden=args.hidden_dim,
+        num_outputs=args.num_outputs,
+        ln=args.ln
+    )

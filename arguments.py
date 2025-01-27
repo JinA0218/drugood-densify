@@ -16,6 +16,8 @@ def get_arguments():
     parser.add_argument('--fingerprint', default='ecfp', type=str, help='dataset figerprint type.')
     parser.add_argument('--batch_size', default=128, type=int, help='batchsize.')
     parser.add_argument('--num_outputs', default=2, type=int, help='number of properties to predict.')
+    parser.add_argument('--sencoder', default='strans', type=str, help='set encoder to use')
+    parser.add_argument('--sencoder_layer', default='pma', type=str, help='layer type in the set encoder')
 
     parser.add_argument('--vec_type', default='count', type=str, help='bit or count vector (for Merck)')
     parser.add_argument('--epochs', default=100, type=int, help='number of training epochs.')

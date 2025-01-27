@@ -367,8 +367,7 @@ class Trainer:
             L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
 
             def w():
-                return [p for n, p in self.model.named_parameters() if "mlp_theta_c" not in n]
-                # return self.model.parameters()
+                return self.model.parameters()
 
             hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=w, i=5, alpha=self.args.lr)
 
@@ -475,7 +474,7 @@ if __name__ == '__main__':
         # print(f"{hyper_map=}")
         # exit()
 
-        path = "experiments/hyper_search"
+        path = f"experiments/hyper_search_{args.sencoder}"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -522,39 +521,81 @@ if __name__ == '__main__':
     last_losses = []
 
     best_hypers = {
-        ("hivprot", "count"): {
+        ("hivprot", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
-        ("hivprot", "bit"): {
+        ("hivprot", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
-        ("dpp4", "count"): {
+        ("dpp4", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
-        ("dpp4", "bit"): {
+        ("dpp4", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
-        ("nk1", "count"): {
+        ("nk1", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
-        ("nk1", "bit"): {
+        ("nk1", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
+        },
+        ("hivprot", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'pma',
+        },
+        ("hivprot", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'pma',
+        },
+        ("dpp4", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'pma',
+        },
+        ("dpp4", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 32, 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'pma',
+        },
+        ("nk1", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'pma',
+        },
+        ("nk1", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'pma',
         },
     }
 
-    hyperparams = best_hypers[(args.dataset, args.vec_type)]
+    hyperparams = best_hypers[(args.dataset, args.vec_type, args.sencoder)]
     for k, v in hyperparams.items():
         setattr(args, k, v)
 
@@ -593,7 +634,7 @@ if __name__ == '__main__':
     l = np.array(losses)
     ll = np.array(last_losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
-    with open(f"./experiments/results-{dev}.txt", "a+") as _f:
+    with open(f"./experiments/results-{args.sencoder}.txt", "a+") as _f:
         _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr}\n")
         _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
         _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

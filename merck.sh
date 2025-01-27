@@ -1,4 +1,9 @@
-# CUDA_VISIBLE_DEVICES=2 HYPER_SWEEP=1 START=0 STOP=12 PYTHONPATH=. python main_merck.py \
+# sencoder=dsets
+# sencoder_layer=max
+sencoder=strans
+sencoder_layer=pma
+
+# CUDA_VISIBLE_DEVICES=3 HYPER_SWEEP=1 START=0 STOP=24 PYTHONPATH=. python main_merck.py \
 #   --model mlp \
 #   --mixer_phi True \
 #   --optimizer adamwschedulefree \
@@ -10,28 +15,22 @@
 #   --inner_episodes 10 \
 #   --initialize_weights False \
 #   --in_features 6560 \
+#   --sencoder $sencoder \
+#   --sencoder_layer $sencoder_layer \
 #   --num_outputs 1 \
 
-# CUDA_VISIBLE_DEVICES=2 HYPER_SWEEP=1 START=12 STOP=24 PYTHONPATH=. python main_merck.py \
-#   --model mlp \
-#   --mixer_phi True \
-#   --optimizer adamwschedulefree \
-#   --wd 1e-4 \
-#   --cwd 1e-3 \
-#   --batch_size 64 \
-#   --batchnorm False \
-#   --outer_episodes 50 \
-#   --inner_episodes 10 \
-#   --initialize_weights False \
-#   --in_features 6560 \
-#   --num_outputs 1 \
-
-for ds in hivprot dpp4 nk1;
+# for ds in hivprot dpp4 nk1;
+# do
+#     for vt in count bit;
+#     do
+for ds in nk1;
 do
     for vt in count bit;
     do
         # --cwd 5e-4 \
         CUDA_VISIBLE_DEVICES=5 PYTHONPATH=. python main_merck.py \
+          --sencoder $sencoder \
+          --sencoder_layer $sencoder_layer \
           --model mlp \
           --mixer_phi True \
           --optimizer adamwschedulefree \
