@@ -220,7 +220,7 @@ class ContextMixer(nn.Module):
             self.se_theta = DSEncoder(dim_in=dim_proj, dim_hidden=dim_proj, num_layers=num_layers, layer=layer)
         elif sencoder == 'strans':
             print("loading set transformer")
-            self.se_theta = STEncoder(num_layers=num_layers, dim_in=dim_proj, dim_hidden=dim_proj,  ln=ln, num_heads=num_heads)
+            self.se_theta = STEncoder(num_layers=num_layers, dim_in=dim_proj, dim_hidden=dim_proj, ln=ln, num_heads=num_heads, pool=layer)
         else:
             raise NotImplementedError
         self.dec = nn.Linear(dim_proj, dim_in)

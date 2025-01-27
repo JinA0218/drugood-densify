@@ -1,5 +1,5 @@
 sencoder=strans
-sencoder_layer=pma
+sencoder_layer=max
 
  # --optimizer adamw \
 CUDA_VISIBLE_DEVICES=4 HYPER_SWEEP=1 START=0 STOP=75 PYTHONPATH=. python main.py \

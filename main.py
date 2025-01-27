@@ -611,7 +611,7 @@ if __name__ == '__main__':
         "hidden_dim": [32],
         "n_context": [4, 16, 32],
         "dropout": [0.5],
-        "inner_episodes": [25],
+        "inner_episodes": [20],
         "outer_episodes": [50],
     }
 
