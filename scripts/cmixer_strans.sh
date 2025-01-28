@@ -6,7 +6,7 @@ do
     for fingerprint in rdkit ecfp;
     do
         # --optimizer adamw \
-        CUDA_VISIBLE_DEVICES=4 PYTHONPATH=. python main.py \
+        CUDA_VISIBLE_DEVICES=4 TUNED_FINAL=1 PYTHONPATH=. python main.py \
           --root data/ \
           --model mlp \
           --mixer_phi True \
@@ -15,9 +15,9 @@ do
           --fingerprint $fingerprint \
           --seed 42 \
           --lr 1e-3 \
-          --wd 0 \
+          --wd 1e-3 \
           --clr 1e-4 \
-          --cwd 1e-5 \
+          --cwd 1e-3 \
           --ln False \
           --dropout 0.5 \
           --num_layers 1 \

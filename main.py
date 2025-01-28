@@ -587,7 +587,7 @@ def run(_args):
         for key in totals.keys():
             totals[key].append(metrics[key])
 
-    with open(f"experiments/ce-results-{_args.sencoder}.txt", "a+") as _fl:
+    with open(f"experiments/ce-results-{_args.sencoder}-ctx32.txt", "a+") as _fl:
         _fl.write(f"{_args.fingerprint} {_args.split_type}\n")
         for key in totals.keys():
             arr = np.array(totals[key])
@@ -607,9 +607,9 @@ if __name__ == '__main__':
     hyper_grid = {
         "lr": [1e-3, 7.5e-4, 5e-4, 2.5e-4, 1e-4],
         "clr": [1e-5, 2.5e-5, 5e-5, 7.5e-5, 1e-4],
-        "num_layers": [1],
+        "num_layers": [2],
         "hidden_dim": [32],
-        "n_context": [4, 16, 32],
+        "n_context": [32],
         "dropout": [0.5],
         "inner_episodes": [20],
         "outer_episodes": [50],
@@ -633,7 +633,7 @@ if __name__ == '__main__':
         print(f"{key}: {hyper_map[key]}")
 
     if os.environ.get("HYPER_SWEEP", "0") == "1":
-        path = f"experiments/ce_hyper_search_{args.sencoder}"
+        path = f"experiments/ce_hyper_search_{args.sencoder}-2lyr"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -684,7 +684,7 @@ if __name__ == '__main__':
     print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
 
     if os.environ.get("TUNED_FINAL", "0") == "1":
-        d = f"experiments/ce_hyper_search_{args.sencoder}/"
+        d = f"experiments/ce_hyper_search_{args.sencoder}-ctx32/"
         print("=" * 20 + f"OURS CROSS ENTROPY {args.sencoder}" + "=" * 20)
         files = os.listdir(d)
 

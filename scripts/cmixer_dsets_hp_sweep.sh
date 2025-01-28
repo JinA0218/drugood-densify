@@ -2,7 +2,7 @@ sencoder=dsets
 sencoder_layer=max
 
 # --optimizer adamw \
-CUDA_VISIBLE_DEVICES=4 HYPER_SWEEP=1 START=0 STOP=75 PYTHONPATH=. python main.py \
+CUDA_VISIBLE_DEVICES=6 HYPER_SWEEP=1 START=0 STOP=25 PYTHONPATH=. python main.py \
   --root data/ \
   --model mlp \
   --mixer_phi True \

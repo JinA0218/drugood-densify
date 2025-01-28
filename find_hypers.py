@@ -48,36 +48,36 @@ if __name__ == "__main__":
                     with open(os.path.join(f"{d}/{_f}"), "rb") as f:
                         metrics = pickle.load(f)
 
-                    # if metrics["metrics"]["val_brier_brier"] < best_brier:
-                    #     best_brier_metrics = metrics
-                    #     best_brier = metrics["metrics"]["val_brier_brier"]
-
-                    # if metrics["metrics"]["val_auc_auc"] > best_auc:
-                    #     best_auc_metrics = metrics
-                    #     best_auc = metrics["metrics"]["val_auc_auc"]
-                    if metrics["metrics"]["brier_brier"] < best_brier:
+                    if metrics["metrics"]["val_brier_brier"] < best_brier:
                         best_brier_metrics = metrics
-                        best_brier = metrics["metrics"]["brier_brier"]
+                        best_brier = metrics["metrics"]["val_brier_brier"]
 
-                    if metrics["metrics"]["auc_auc"] > best_auc:
+                    if metrics["metrics"]["val_auc_auc"] > best_auc:
                         best_auc_metrics = metrics
-                        best_auc = metrics["metrics"]["auc_auc"]
+                        best_auc = metrics["metrics"]["val_auc_auc"]
+                    # if metrics["metrics"]["brier_brier"] < best_brier:
+                    #     best_brier_metrics = metrics
+                    #     best_brier = metrics["metrics"]["brier_brier"]
 
-                # print(f"\n{split=} {fp=} files: {len(filtered_files)}\n{best_auc_metrics=}\n\n{best_brier_metrics=}\n\n")
-                # print(f"{'-' * 50}")
+                    # if metrics["metrics"]["auc_auc"] > best_auc:
+                    #     best_auc_metrics = metrics
+                    #     best_auc = metrics["metrics"]["auc_auc"]
 
-                # print("best auc metrics:")
-                # for k, v in best_auc_metrics["metrics"].items():
-                #     print(f"{k}: {v}")
-                # print("\n\n")
+                print(f"\n{split=} {fp=} files: {len(filtered_files)}\n{best_auc_metrics=}\n\n{best_brier_metrics=}\n\n")
+                print(f"{'-' * 50}")
 
-                # print("best brier metrics:")
-                # for k, v in best_brier_metrics["metrics"].items():
-                #     print(f"{k}: {v}")
-                # print("\n\n")
+                print("best auc metrics:")
+                for k, v in best_auc_metrics["metrics"].items():
+                    print(f"{k}: {v}")
+                print("\n\n")
 
-                print(f"\n{split=} {fp=} files: {len(filtered_files)}\n\n")
-                print(f"auc: {best_auc_metrics['metrics']['auc_auc']=}")
-                print(f"\n{best_auc_metrics}\n")
-                print(f"brier: {best_brier_metrics['metrics']['brier_brier']=}")
-                print(f"\n{best_brier_metrics}\n")
+                print("best brier metrics:")
+                for k, v in best_brier_metrics["metrics"].items():
+                    print(f"{k}: {v}")
+                print("\n\n")
+
+                # print(f"\n{split=} {fp=} files: {len(filtered_files)}\n\n")
+                # print(f"auc: {best_auc_metrics['metrics']['auc_auc']=}")
+                # print(f"\n{best_auc_metrics}\n")
+                # print(f"brier: {best_brier_metrics['metrics']['brier_brier']=}")
+                # print(f"\n{best_brier_metrics}\n")

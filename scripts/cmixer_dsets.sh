@@ -6,7 +6,7 @@ for split in spectral random scaffold weight;
 do
     for fingerprint in ecfp rdkit;
     do
-        CUDA_VISIBLE_DEVICES=4 PYTHONPATH=. python main.py \
+        CUDA_VISIBLE_DEVICES=5 TUNED_FINAL=1 PYTHONPATH=. python main.py \
           --root data/ \
           --model mlp \
           --mixer_phi True \
