@@ -46,13 +46,14 @@ class PermEquiSum(nn.Module):
         return x
 
 class MAB(nn.Module):
-    def __init__(self, dim_Q, dim_K, dim_V, num_heads, ln=False):
+    def __init__(self, dim_Q, dim_K, dim_V, num_heads, ln=False, sigmoid=False):
         super(MAB, self).__init__()
         self.dim_V = dim_V
         self.num_heads = num_heads
         self.fc_q = nn.Linear(dim_Q, dim_V)
         self.fc_k = nn.Linear(dim_K, dim_V)
         self.fc_v = nn.Linear(dim_K, dim_V)
+        self.sigmoid = sigmoid
         if ln:
             self.ln0 = nn.LayerNorm(dim_V)
             self.ln1 = nn.LayerNorm(dim_V)
@@ -67,9 +68,12 @@ class MAB(nn.Module):
         K_ = torch.cat(K.split(dim_split, 2), 0)
         V_ = torch.cat(V.split(dim_split, 2), 0)
 
-        A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V), 2)
-        # A = torch.sigmoid(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V))
-        A = F.dropout(A, p=0.5, training=self.training)
+        if not self.sigmoid:
+            A = torch.softmax(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V), 2)
+            A = F.dropout(A, p=0.5, training=self.training)
+        else:
+            A = torch.sigmoid(Q_.bmm(K_.transpose(1, 2))/math.sqrt(self.dim_V))
+
         O = torch.cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
         O = O if getattr(self, 'ln0', None) is None else self.ln0(O)
         O = O + F.relu(self.fc_o(O))
@@ -77,9 +81,9 @@ class MAB(nn.Module):
         return O
 
 class SAB(nn.Module):
-    def __init__(self, dim_in, dim_out, num_heads, ln=False):
+    def __init__(self, dim_in, dim_out, num_heads, ln=False, sigmoid=False):
         super(SAB, self).__init__()
-        self.mab = MAB(dim_in, dim_in, dim_out, num_heads, ln=ln)
+        self.mab = MAB(dim_in, dim_in, dim_out, num_heads, ln=ln, sigmoid=sigmoid)
 
     def forward(self, Q, K=None):
         if K is not None:
@@ -87,29 +91,29 @@ class SAB(nn.Module):
         return self.mab(Q=Q, K=Q)
 
 class ISAB(nn.Module):
-    def __init__(self, dim_in, dim_out, num_heads, num_inds, ln=False):
+    def __init__(self, dim_in, dim_out, num_heads, num_inds, ln=False, sigmoid=False):
         super(ISAB, self).__init__()
         self.I = nn.Parameter(torch.Tensor(1, num_inds, dim_out))
         nn.init.xavier_uniform_(self.I)
-        self.mab0 = MAB(dim_out, dim_in, dim_out, num_heads, ln=ln)
-        self.mab1 = MAB(dim_in, dim_out, dim_out, num_heads, ln=ln)
+        self.mab0 = MAB(dim_out, dim_in, dim_out, num_heads, ln=ln, sigmoid=sigmoid)
+        self.mab1 = MAB(dim_in, dim_out, dim_out, num_heads, ln=ln, sigmoid=sigmoid)
 
     def forward(self, X):
         H = self.mab0(self.I.repeat(X.size(0), 1, 1), X)
         return self.mab1(X, H)
 
 class PMA(nn.Module):
-    def __init__(self, dim, num_heads, num_seeds, ln=False):
+    def __init__(self, dim, num_heads, num_seeds, ln=False, sigmoid=False):
         super(PMA, self).__init__()
         self.S = nn.Parameter(torch.Tensor(1, num_seeds, dim))
         nn.init.xavier_uniform_(self.S)
-        self.mab = MAB(dim, dim, dim, num_heads, ln=ln)
+        self.mab = MAB(dim, dim, dim, num_heads, ln=ln, sigmoid=sigmoid)
 
     def forward(self, X):
         return self.mab(self.S.repeat(X.size(0), 1, 1), X)
 
 class STEncoder(nn.Module):
-    def __init__(self, dim_in, dim_hidden, num_layers=2, num_inds=16, num_heads=4, num_outputs=1, ln=False, layer='sab', pool='pma'):
+    def __init__(self, dim_in, dim_hidden, num_layers=2, num_inds=16, num_heads=4, num_outputs=1, ln=False, layer='sab', pool='pma', mab_sigmoid=True, pma_sigmoid=True):
         super(STEncoder, self).__init__()
         self.ln = ln
         self.pool = pool
@@ -127,16 +131,16 @@ class STEncoder(nn.Module):
             stlayer = partial(ISAB, num_inds=num_inds)
         else:
             raise NotImplementedError
-        
+
         self.encoder = []
         for i in range(num_layers):
             if i == 0:
-                self.encoder.append(stlayer(dim_in=dim_in, dim_out=dim_hidden//2 if num_layers > 1 else dim_hidden, num_heads=num_heads, ln=ln))
+                self.encoder.append(stlayer(dim_in=dim_in, dim_out=dim_hidden//2 if num_layers > 1 else dim_hidden, num_heads=num_heads, ln=ln, sigmoid=mab_sigmoid))
             else:
                 self.encoder.append(stlayer(dim_in=dim_hidden//2 if num_layers > 1 else dim_hidden, dim_out=dim_hidden//2 if num_layers > 1 else
-                                            dim_hidden, num_heads=num_heads, ln=ln))
+                                            dim_hidden, num_heads=num_heads, ln=ln, sigmoid=mab_sigmoid))
         if pool == 'pma':
-            self.encoder.append(PMA(dim=dim_hidden//2 if num_layers > 1 else dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln))
+            self.encoder.append(PMA(dim=dim_hidden//2 if num_layers > 1 else dim_hidden, num_heads=num_heads, num_seeds=num_outputs, ln=ln, sigmoid=pma_sigmoid))
         self.encoder = nn.Sequential(*self.encoder)
         self.proj = nn.Linear(in_features=dim_hidden//2 if num_layers > 1 else dim_hidden, out_features=dim_hidden)
 
@@ -219,8 +223,22 @@ class ContextMixer(nn.Module):
             print("loading deepsets")
             self.se_theta = DSEncoder(dim_in=dim_proj, dim_hidden=dim_proj, num_layers=num_layers, layer=layer)
         elif sencoder == 'strans':
-            print("loading set transformer")
-            self.se_theta = STEncoder(num_layers=num_layers, dim_in=dim_proj, dim_hidden=dim_proj, ln=ln, num_heads=num_heads, pool=layer)
+            print(f"loading set transformer {layer=}")
+
+            # "pma" is used for merck which used sigmoid for all attention layers.
+            # zinc experiments used softmax + max pooling
+            if layer == "pma":
+                mab_sigmoid = True
+                pma_sigmoid = True
+            else:
+                mab_sigmoid = False
+                pma_sigmoid = False
+
+            self.se_theta = STEncoder(
+                num_layers=num_layers, dim_in=dim_proj, dim_hidden=dim_proj,
+                ln=ln, num_heads=num_heads, pool=layer,
+                mab_sigmoid=mab_sigmoid, pma_sigmoid=pma_sigmoid
+            )
         else:
             raise NotImplementedError
         self.dec = nn.Linear(dim_proj, dim_in)

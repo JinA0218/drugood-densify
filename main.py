@@ -607,7 +607,7 @@ if __name__ == '__main__':
     hyper_grid = {
         "lr": [1e-3, 7.5e-4, 5e-4, 2.5e-4, 1e-4],
         "clr": [1e-5, 2.5e-5, 5e-5, 7.5e-5, 1e-4],
-        "num_layers": [2],
+        "num_layers": [1],
         "hidden_dim": [32],
         "n_context": [32],
         "dropout": [0.5],
@@ -633,7 +633,7 @@ if __name__ == '__main__':
         print(f"{key}: {hyper_map[key]}")
 
     if os.environ.get("HYPER_SWEEP", "0") == "1":
-        path = f"experiments/ce_hyper_search_{args.sencoder}-2lyr"
+        path = f"experiments/ce_hyper_search_{args.sencoder}-ctx32"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():

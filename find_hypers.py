@@ -29,7 +29,7 @@ if __name__ == "__main__":
                 print(f"\n{ds=} {t=} files: {len(filtered_files)}\n{best_metrics=}\n\n")
 
     for model in ["dsets", "strans"]:
-        d = f"experiments/ce_hyper_search_{model}/"
+        d = f"experiments/ce_hyper_search_{model}-ctx32/"
         print("=" * 20 + f"OURS CROSS ENTROPY {model}" + "=" * 20)
         files = os.listdir(d)
 

@@ -19,16 +19,12 @@ sencoder_layer=pma
 #   --sencoder_layer $sencoder_layer \
 #   --num_outputs 1 \
 
-# for ds in hivprot dpp4 nk1;
-# do
-#     for vt in count bit;
-#     do
-for ds in nk1;
+for ds in hivprot dpp4 nk1;
 do
     for vt in count bit;
     do
         # --cwd 5e-4 \
-        CUDA_VISIBLE_DEVICES=5 PYTHONPATH=. python main_merck.py \
+        CUDA_VISIBLE_DEVICES=2 PYTHONPATH=. python main_merck.py \
           --sencoder $sencoder \
           --sencoder_layer $sencoder_layer \
           --model mlp \
