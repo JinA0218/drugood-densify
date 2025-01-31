@@ -394,6 +394,8 @@ class Trainer:
                 # self.model.eval(); self.mixer_phi.eval()
                 x_v, y_v = get_data_n_times(loader=mvalidloader, n=1)
 
+                # x_v = torch.nn.functional.dropout(x_v, p=0.5)
+
                 context_v = None
                 # context_v = torch.cat([next(self.contextloader).unsqueeze(1) for _ in range(n_samples)], dim=1).to(self.args.device)
 
@@ -405,8 +407,9 @@ class Trainer:
                 y_v_hat = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi)
                
                 L_V = F.cross_entropy(y_v_hat[:, 1], y_v.to(self.args.device)) #, weight=self.validloader.dataset.classweights.to(self.args.device))
-                # L_V += 0.1 * F.cross_entropy(y_cv_hat[:, 1], y_context_v0.float()) #, weight=self.validloader.dataset.classweights.to(self.args.device))
-                # L_V += 0.1 * F.cross_entropy(y_cv_hat[:, 1], y_context_v1.float()) #, weight=self.validloader.dataset.classweights.to(self.args.device))
+                # L_ood = 0.5 * F.cross_entropy(y_cv_hat[:, 1], y_context_v0.float()) #, weight=self.validloader.dataset.classweights.to(self.args.device))
+                # L_ood += 0.5 * F.cross_entropy(y_cv_hat[:, 1], y_context_v1.float()) #, weight=self.validloader.dataset.classweights.to(self.args.device))
+                # L_V += 0.01 * L_ood
                 
                 hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=self.model.parameters, i=5, alpha=self.args.lr)
                 
@@ -724,7 +727,13 @@ if __name__ == '__main__':
                 setattr(args, k, v)
 
             args.name = f"tuned {name}"
+
+            args.lr = 0.001
+            args.wd = 0
+            args.clr = 5e-5
+            args.cwd = 5e-4
             run(args)
+
     else:
         args.name = "single run"
         run(args)
