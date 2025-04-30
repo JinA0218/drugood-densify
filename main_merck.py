@@ -28,7 +28,7 @@ class Merck(Dataset):
         self.sigma = 1
 
     def load_data(self):
-        files = os.listdir("data/Merck/preprocessed/")
+        files = os.listdir("/d1/dataset/Merck/Merck/preprocessed/")
 
         def filter(s):
             if self.is_context:
@@ -36,7 +36,7 @@ class Merck(Dataset):
             return self.dataset in s.lower() and self.split in s and ".pt" in s
 
         files = [f for f in files if filter(f)]
-        data = [torch.load(f"data/Merck/preprocessed/{f}").float() for f in files]
+        data = [torch.load(f"/d1/dataset/Merck/Merck/preprocessed/{f}").float() for f in files]
         max_dim = 6561
 
         data = [torch.cat((d, torch.zeros(d.size(0), max_dim - d.size(1))), dim=1) for d in data]
@@ -45,7 +45,7 @@ class Merck(Dataset):
 
         data = torch.exp(data) - 1
 
-        with open("data/Merck/preprocessed/stats.pkl", "rb") as f:
+        with open("/d1/dataset/Merck/Merck/preprocessed/stats.pkl", "rb") as f:
             stats = pickle.load(f)
 
         stats = [v for v in stats if v[0].lower() == self.dataset]
@@ -561,7 +561,7 @@ if __name__ == '__main__':
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'max',
         },
         ("hivprot", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
@@ -579,19 +579,19 @@ if __name__ == '__main__':
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'sum',
         },
         ("nk1", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'sum',
         },
         ("nk1", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'sum',
         },
     }
 
@@ -634,8 +634,10 @@ if __name__ == '__main__':
     l = np.array(losses)
     ll = np.array(last_losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
+    
+    os.makedirs("./experiments", exist_ok=True)
     with open(f"./experiments/results-{args.sencoder}.txt", "a+") as _f:
-        _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr}\n")
+        _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer}\n")
         _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
         _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
 
