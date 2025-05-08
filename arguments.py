@@ -9,7 +9,7 @@ def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--run', default=0, type=int, help='number of times to repeat experiment.')
     parser.add_argument('--seed', default=42, type=int, help='number of times to repeat experiment.')
-    parser.add_argument('--root', default='data', type=str, help='modelzoo to use for training.')
+    parser.add_argument('--root', default="/c2/jinakim/dataset_backup/antimalaria/", type=str, help='modelzoo to use for training.')
     parser.add_argument('--model', default='mlp', type=str, help='model to fit nn to [mlp].')
     parser.add_argument('--dataset', default='antimalaria', type=str, help='dataset used to train zoo.')
     parser.add_argument('--split_type', default='spectral', type=str, help='dataset split type.')
@@ -42,6 +42,8 @@ def get_arguments():
     parser.add_argument('--inner_episodes', type=int, default=5, help='inner episodes for BO')
     parser.add_argument('--n_context', type=int, default=16, help='number of context points')
     parser.add_argument('--early_stopping_episodes', type=int, default=10, help='inner episodes for BO')
+    parser.add_argument('--num_inner_dataset', type=int, default=1, help='num_inner_dataset')
+    
 
     args = parser.parse_args()
 

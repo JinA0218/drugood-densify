@@ -28,7 +28,7 @@ class Merck(Dataset):
         self.sigma = 1
 
     def load_data(self):
-        files = os.listdir("/d1/dataset/Merck/Merck/preprocessed/")
+        files = os.listdir("/c2/jinakim/dataset_backup/Merck/Merck/preprocessed/")
 
         def filter(s):
             if self.is_context:
@@ -36,7 +36,7 @@ class Merck(Dataset):
             return self.dataset in s.lower() and self.split in s and ".pt" in s
 
         files = [f for f in files if filter(f)]
-        data = [torch.load(f"/d1/dataset/Merck/Merck/preprocessed/{f}").float() for f in files]
+        data = [torch.load(f"/c2/jinakim/dataset_backup/Merck/Merck/preprocessed/{f}").float() for f in files]
         max_dim = 6561
 
         data = [torch.cat((d, torch.zeros(d.size(0), max_dim - d.size(1))), dim=1) for d in data]
@@ -45,7 +45,7 @@ class Merck(Dataset):
 
         data = torch.exp(data) - 1
 
-        with open("/d1/dataset/Merck/Merck/preprocessed/stats.pkl", "rb") as f:
+        with open("/c2/jinakim/dataset_backup/Merck/Merck/preprocessed/stats.pkl", "rb") as f:
             stats = pickle.load(f)
 
         stats = [v for v in stats if v[0].lower() == self.dataset]
@@ -78,44 +78,91 @@ def seed_worker(worker_id):
 
 
 def get_dataset(args, test=False):
-    print(f"{args.dataset=} {args.vec_type=}")
-    trainset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+    
+    if args.num_inner_dataset == 1:
+        print(f"Inner {args.dataset=} {args.vec_type=}")
+        trainset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
 
-    if test:
-        # if testing, just copy the trainset since we will take the last model no matter what
-        validset = copy.deepcopy(trainset)
-        perm = np.random.permutation(validset.data.shape[0])
+        if test:
+            # if testing, just copy the trainset since we will take the last model no matter what
+            validset = copy.deepcopy(trainset)
+            perm = np.random.permutation(validset.data.shape[0])
 
-        # make it small so we don't waste too much calculation
-        n = int(perm.shape[0] * 0.1)
-        idx = perm[:n]
+            # make it small so we don't waste too much calculation
+            n = int(perm.shape[0] * 0.1)
+            idx = perm[:n]
 
-        validset.data = validset.data[idx]
-        validset.labels = validset.labels[idx]
+            validset.data = validset.data[idx]
+            validset.labels = validset.labels[idx]
+        else:
+            # if we are not testing, then we are tuning hyperparameters. In this case, we should
+            # split the train set into a validation set for hyperparameter selection
+            train_idx = np.load(f"data/perms/train-idx-{args.dataset}.npy")
+            trainset.data = trainset.data[train_idx]
+            trainset.labels = trainset.labels[train_idx]
+
+            validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+            val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
+            validset.data = validset.data[val_idx]
+            validset.labels = validset.labels[val_idx]
+
+        testset = Merck(split="test", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+
+        # validset for outer loop
+        mvalidset = None
+        for dataset in [d for d in ["hivprot", "dpp4", "nk1"] if d != args.dataset]:
+            _validset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False)
+            if mvalidset is None:
+                mvalidset = _validset
+                continue
+
+            mvalidset.data = torch.cat((mvalidset.data, _validset.data), dim=0)
+            mvalidset.labels = torch.cat((mvalidset.labels, _validset.labels), dim=0)
+    elif args.num_inner_dataset == 2:
+        raise NotImplementedError()
+        # TODO implement not finished yet
+        print(f"Outer {args.dataset=} {args.vec_type=}")
+        # validset for outer loop
+        trainset = None
+        for dataset in [d for d in ["hivprot", "dpp4", "nk1"] if d != args.dataset]:
+            _trainset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False)
+            if trainset is None:
+                trainset = _trainset
+                continue
+
+            trainset.data = torch.cat((trainset.data, _trainset.data), dim=0)
+            trainset.labels = torch.cat((trainset.labels, _trainset.labels), dim=0)
+        
+        mvalidset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+
+        if test:
+            # if testing, just copy the trainset since we will take the last model no matter what
+            validset = copy.deepcopy(trainset)
+            perm = np.random.permutation(validset.data.shape[0])
+
+            # make it small so we don't waste too much calculation
+            n = int(perm.shape[0] * 0.1)
+            idx = perm[:n]
+
+            validset.data = validset.data[idx]
+            validset.labels = validset.labels[idx]
+        else:
+            # if we are not testing, then we are tuning hyperparameters. In this case, we should
+            # split the train set into a validation set for hyperparameter selection
+            train_idx = np.load(f"data/perms/train-idx-{args.dataset}.npy")
+            trainset.data = trainset.data[train_idx]
+            trainset.labels = trainset.labels[train_idx]
+
+            validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+            val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
+            validset.data = validset.data[val_idx]
+            validset.labels = validset.labels[val_idx]
+
+        testset = Merck(split="test", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
+
+        
     else:
-        # if we are not testing, then we are tuning hyperparameters. In this case, we should
-        # split the train set into a validation set for hyperparameter selection
-        train_idx = np.load(f"data/perms/train-idx-{args.dataset}.npy")
-        trainset.data = trainset.data[train_idx]
-        trainset.labels = trainset.labels[train_idx]
-
-        validset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
-        val_idx = np.load(f"data/perms/val-idx-{args.dataset}.npy")
-        validset.data = validset.data[val_idx]
-        validset.labels = validset.labels[val_idx]
-
-    testset = Merck(split="test", vec_type=args.vec_type, dataset=args.dataset, is_context=False)
-
-    # validset for outer loop
-    mvalidset = None
-    for dataset in [d for d in ["hivprot", "dpp4", "nk1"] if d != args.dataset]:
-        _validset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False)
-        if mvalidset is None:
-            mvalidset = _validset
-            continue
-
-        mvalidset.data = torch.cat((mvalidset.data, _validset.data), dim=0)
-        mvalidset.labels = torch.cat((mvalidset.labels, _validset.labels), dim=0)
+        raise NotImplementedError()
 
     m = trainset.data.amax()
     trainset.data = trainset.data / m
@@ -512,7 +559,7 @@ if __name__ == '__main__':
                                   )
 
                 _, _, vmse, _ = trainer.fit()
-                with open(f"{path}/{dataset}-{featurization}-{hyper_key}.pkl", "wb") as f:
+                with open(f"{path}/{dataset}-{featurization}-{hyper_key}--in{args.num_inner_dataset}.pkl", "wb") as f:
                     pickle.dump({"mse": vmse, **hypers}, f)
 
         exit("exiting after hyperparameter sweep")

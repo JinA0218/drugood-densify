@@ -18,7 +18,7 @@ import sys
 import os
 
 data_root = './data/Merck/'
-save_root = './/d1/dataset/Merck/Merck/preprocessed/'
+save_root = './c2/jinakim/dataset_backup/Merck/Merck/preprocessed/'
 os.makedirs(save_root, exist_ok=True)
 FEATURE_SCALE = 'log'   # 'uniform'
 

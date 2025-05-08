@@ -116,13 +116,14 @@ def get_dataset(args):
             fingerprint=args.fingerprint
         )
 
-        # split off part of the validation set for meta validation which we learn in the outer loop
+        # Use other fingerprint
         mvalidset = AntiMalaria(
-            root=args.root,
-            split='valid',
-            split_type=args.split_type,
-            fingerprint=args.fingerprint
+                root=args.root,
+                split='train', # TODO train? valid? both? - check mvalidloader
+                split_type=args.split_type,
+                fingerprint=[k for k, v in fingerprints.items() if k != args.fingerprint][0]
         )
+        
         validset = AntiMalaria(
             root=args.root,
             split='valid',
@@ -141,19 +142,15 @@ def get_dataset(args):
         # mvalidset.features = mvalidset.features[idx == mvidx]
         # mvalidset.labels = mvalidset.labels[idx == mvidx]
 
-        perm = np.random.permutation(validset.features.shape[0])
-        n = int(perm.shape[0] * 0.8)
-        mvalid_idx, valid_idx = perm[:n], perm[n:]
+        # perm = np.random.permutation(validset.features.shape[0])
+        # n = int(perm.shape[0] * 0.8)
+        # mvalid_idx, valid_idx = perm[:n], perm[n:]
 
-        validset.features = validset.features[valid_idx]
-        validset.labels = validset.labels[valid_idx]
+        # validset.features = validset.features[valid_idx]
+        # validset.labels = validset.labels[valid_idx]
 
-        mvalidset.features = mvalidset.features[mvalid_idx]
-        mvalidset.labels = mvalidset.labels[mvalid_idx]
-
-        print(f"{trainset.features.shape=} {trainset.labels.shape=}")
-        print(f"{validset.features.shape=} {validset.labels.shape=}")
-        print(f"{mvalidset.features.shape=} {mvalidset.labels.shape=}")
+        # mvalidset.features = mvalidset.features[mvalid_idx]
+        # mvalidset.labels = mvalidset.labels[mvalid_idx]
 
         testset = AntiMalaria(
             root=args.root,
@@ -161,6 +158,12 @@ def get_dataset(args):
             split_type=args.split_type,
             fingerprint=args.fingerprint
         )
+        
+        print(f"{trainset.features.shape=} {trainset.labels.shape=}")
+        print(f"{validset.features.shape=} {validset.labels.shape=}")
+        print(f"{mvalidset.features.shape=} {mvalidset.labels.shape=}")
+        print(f"{testset.features.shape=} {testset.labels.shape=}")
+        
     else:
         raise NotImplementedError
 
@@ -174,7 +177,7 @@ def get_dataset(args):
         #generator=g, 
         shuffle=True,
         pin_memory=True,
-        persistent_workers=True,
+        persistent_workers=True, # TODO check
         drop_last=True,
     )
 
@@ -184,7 +187,7 @@ def get_dataset(args):
         num_workers=args.num_workers,
         #worker_init_fn=seed_worker, 
         #generator=g,
-        shuffle=True,
+        shuffle=True, # TODO shuffle change based on what we use in mvalid?
         pin_memory=True,
         persistent_workers=True,
         drop_last=True,
@@ -216,7 +219,7 @@ def get_dataset(args):
 
     contextloader = None
     if args.mixer_phi:
-        contextset = ZINC(root=args.root, fingerprint=args.fingerprint)
+        contextset = ZINC(root="/c2/jinakim/dataset_backup/ZINC/", fingerprint=args.fingerprint)
         contextloader = DataLoader(
             contextset,
             batch_size=args.batch_size,
@@ -386,14 +389,23 @@ class Trainer:
                 # Compute hypergradients
                 # x_t, y_t = get_data_n_times(loader=trainloader, n=5)
                 x_t, y_t = next(trainloader) #get_data_n_times(loader=trainloader, n=5)
-                n_samples = (torch.randperm(args.n_context) + 1)[0].item()
+                n_samples = (torch.randperm(args.n_context) + 1)[0].item() # default = 16
                 context_t = torch.cat([next(self.contextloader).unsqueeze(1) for _ in range(n_samples)], dim=1)  #get_data_n_times(self.contextloader, n=5)
                 L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
                         context=context_t, device=self.args.device)
 
                 # self.model.eval(); self.mixer_phi.eval()
                 x_v, y_v = get_data_n_times(loader=mvalidloader, n=1)
-
+                
+                breakpoint()
+                if self.args.fingerprint == "rdkit":
+                    # mvalidloader : using ecfp 
+                    pass
+                elif self.args.fingerprint == "ecfp":
+                    pass
+                else:
+                    raise Exception()
+                
                 # x_v = torch.nn.functional.dropout(x_v, p=0.5)
 
                 context_v = None
@@ -590,16 +602,16 @@ def run(_args):
         for key in totals.keys():
             totals[key].append(metrics[key])
 
-    with open(f"experiments/ce-results-{_args.sencoder}-ctx32.txt", "a+") as _fl:
+    with open(f"experiments/main_2-ce-results-{_args.sencoder}-ctx32.txt", "a+") as _fl:
         _fl.write(f"{_args.fingerprint} {_args.split_type}\n")
         for key in totals.keys():
             arr = np.array(totals[key])
 
             mu = arr.mean()
             stderr = arr.std() / np.sqrt(arr.shape[0])
-            print(f"{args.name} {key}: {mu} +- {stderr}")
+            print(f"{_args.name} {key}: {mu} +- {stderr}") # TODO originally was set to args
 
-            _fl.write(f"{args.name} {key}: {mu} +- {stderr}\n")
+            _fl.write(f"{_args.name} {key}: {mu} +- {stderr}\n") # TODO originally was set to args
         _fl.write("\n\n")
 
 
@@ -636,7 +648,7 @@ if __name__ == '__main__':
         print(f"{key}: {hyper_map[key]}")
 
     if os.environ.get("HYPER_SWEEP", "0") == "1":
-        path = f"experiments/ce_hyper_search_{args.sencoder}-ctx32"
+        path = f"experiments/main_2-ce_hyper_search_{args.sencoder}-ctx32"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -687,7 +699,7 @@ if __name__ == '__main__':
     print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
 
     if os.environ.get("TUNED_FINAL", "0") == "1":
-        d = f"experiments/ce_hyper_search_{args.sencoder}-ctx32/"
+        d = f"experiments/main_2-ce_hyper_search_{args.sencoder}-ctx32/"
         print("=" * 20 + f"OURS CROSS ENTROPY {args.sencoder}" + "=" * 20)
         files = os.listdir(d)
 

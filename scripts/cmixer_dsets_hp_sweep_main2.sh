@@ -1,8 +1,8 @@
-sencoder=strans
+sencoder=dsets
 sencoder_layer=max
 
- # --optimizer adamw \
-CUDA_VISIBLE_DEVICES=4 HYPER_SWEEP=1 START=0 STOP=25 PYTHONPATH=. python main_origin.py \
+# --optimizer adamw \
+CUDA_VISIBLE_DEVICES=6 HYPER_SWEEP=1 START=0 STOP=25 PYTHONPATH=. python main_2.py \
   --model mlp \
   --mixer_phi True \
   --optimizer adam \
