@@ -138,7 +138,7 @@ for ds in "${targets[@]}"; do
 
                 echo "Launching job $job_id on GPU $gpu_id | ds=$ds | md=($md1,$md2) | vt=$vt | sencoder=$sencoder | mixing_layer=$ml"
                 mix_default_type="xmix"
-                MIX_TYPE=MIXUP RANDOM_YV=1 SAVE_TSNE_MODEL=0 MVALID_DEFAULT=tsne_best_origin_testing MIXING_X_DEFAULT=$mix_default_type CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real.py \
+                MIX_TYPE=MANIFOLD_MIXUP RANDOM_YV=1 SAVE_TSNE_MODEL=0 MVALID_DEFAULT=tsne_best_origin_testing MIXING_X_DEFAULT=$mix_default_type CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real.py \
                     --sencoder "$sencoder" \
                     --model mlp \
                     --optimizer adamwschedulefree \
