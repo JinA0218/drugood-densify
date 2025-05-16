@@ -15,6 +15,7 @@ from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
 from main_origin import get_model
 
+# contextloader includes other 2
 dataset_names = ['3a4', 'cb1', 'dpp4', 'hivint', 'hivprot', 'logd', 'metab', 'nk1', 'ox1', 'ox2', 'pgp', 'ppb', 'rat_f', 'tdi', 'thrombin']
 
 
@@ -52,6 +53,7 @@ class Merck(Dataset):
         
         print('=====')
         print('is_context ', self.is_context)
+        print('mvalid_dataset ', self.mvalid_dataset)
         print('files ', files)
         
         data = [torch.load(f"/c2/jinakim/dataset_backup/Merck/Merck/preprocessed/{f}").float() for f in files]
@@ -465,6 +467,9 @@ class Trainer:
             # self.model.eval()
             # self.mixer_phi.eval()
             x_v, y_v = next(mvalidloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+            if os.environ.get('RANDOM_YV', '0') =='1':
+                y_v = torch.randn_like(y_v)
+                
             # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
 
             context_v = None
@@ -634,73 +639,73 @@ if __name__ == '__main__':
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'#, "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("hivprot", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'#, "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("dpp4", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'#, "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("dpp4", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'#, "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("nk1", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'#, "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("nk1", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'#, "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("hivprot", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'max',
+            'sencoder': 'strans', "sencoder_layer": 'max',
         },
         ("hivprot", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'pma',
         },
         ("dpp4", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'pma',
         },
         ("dpp4", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'# , "sencoder_layer": 'sum',
+            'sencoder': 'strans', "sencoder_layer": 'sum',
         },
         ("nk1", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'# , "sencoder_layer": 'sum',
+            'sencoder': 'strans', "sencoder_layer": 'sum',
         },
         ("nk1", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'# , "sencoder_layer": 'sum',
+            'sencoder': 'strans', "sencoder_layer": 'sum',
         },
     }
 
@@ -752,12 +757,12 @@ if __name__ == '__main__':
             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
     else:
         if not args.exclude_mval_data_in_context:
-            with open(f"./experiments/S-results-{args.sencoder}_mvalid-pool.txt", "a+") as _f:
+            with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-2.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         else:
-            with open(f"./experiments/S-results-{args.sencoder}_mvalid-exclude-pool.txt", "a+") as _f:
+            with open(f"./experiments/S-results-{args.sencoder}_mvalid-exclude-all.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

@@ -20,7 +20,7 @@ def get_arguments():
     parser.add_argument('--sencoder_layer', default='pma', type=str, help='layer type in the set encoder')
 
     parser.add_argument('--vec_type', default='count', type=str, help='bit or count vector (for Merck)')
-    parser.add_argument('--epochs', default=100, type=int, help='number of training epochs.')
+    parser.add_argument('--epochs', default=500, type=int, help='number of training epochs.')
     parser.add_argument('--optimizer', default='adamw', type=str, help='dataset used to train zoo.')
     parser.add_argument('--num_workers', default=8, type=int, help='trainloader number of workers.')
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate.')
@@ -43,6 +43,20 @@ def get_arguments():
     parser.add_argument('--n_context', type=int, default=16, help='number of context points')
     parser.add_argument('--early_stopping_episodes', type=int, default=10, help='inner episodes for BO')
     parser.add_argument('--num_inner_dataset', type=int, default=1, help='num_inner_dataset')
+    parser.add_argument('--same_setting', action='store_true')
+    parser.add_argument('--low_sim', type=str)
+    parser.add_argument('--exclude_mval_data_in_context', action='store_true')
+    
+    parser.add_argument('--mvalid_dataset', nargs='+', type=str)
+    parser.add_argument('--context_dataset', nargs='+', type=str)
+    parser.add_argument('--specify_ood_dataset', nargs='+', type=str)
+    parser.add_argument('--embed_test',  default="ours_best", type=str, help='embed type.')
+    parser.add_argument('--tsne_plot', action='store_true')
+    parser.add_argument('--mixing_layer', default=0, type=int, help='number of properties to predict.')
+    
+    parser.add_argument('--model_no_context', action='store_true')
+    
+
     
 
     args = parser.parse_args()

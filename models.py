@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
+import os
 
 __all__ = ['get_model']
 
@@ -13,6 +14,7 @@ def get_model(args):
                     num_layers=args.num_layers,
                     num_outputs=args.num_outputs,
                     dropout=args.dropout,
+                    mixing_layer=args.mixing_layer,
                     batchnorm=args.batchnorm,
                     )
     else:
@@ -57,25 +59,182 @@ class MLP(nn.Module):
             self.mlp_theta.append(nn.Sequential(*mlp))
         self.mlp_theta = nn.ModuleList(self.mlp_theta)
         self.head_theta = nn.Linear(in_features=hidden_dim, out_features=num_outputs)
-
-    def forward(self, x, context=None, mixer_phi=None):
+        
+        if os.environ.get("MIXING_X_DEFAULT", "xmix") != "xmix":
+            self.fusion_mlp = torch.nn.Sequential(
+                                torch.nn.Linear(hidden_dim * 2, hidden_dim),
+                                torch.nn.ReLU()
+                            )
+        else:
+            self.fusion_mlp = None
+    
+    def forward(self, x, context=None, mixer_phi=None, embedding_list=None, label_list=None, embed_type=None, embed_test=None):
         if context is None:
             context = x.clone().unsqueeze(1)
         B, S, H = context.size()
-        context = context.view(B*S, H)
-        for i, theta in enumerate(self.mlp_theta):
-            x = theta(x)
-            if i <= self.mixing_layer:
-                context = theta(context)
-            if i == self.mixing_layer:
-                context = context.view(B, S, -1)
-                x = mixer_phi(x_real=x, x_context=context)
-        #context = context.view(B, S, -1)
-        #x_mixed = mixer_phi(x_real=x, x_context=context)
-        #y_hat= self.head_theta(x_mixed)
-        y_hat= self.head_theta(x)
-        return y_hat
+        context = context.reshape(B*S, H) # NOTE originally view but changed to reshape
+        
+        B_X, S_X, H_X = None, None, None
+        if embed_type != None and embed_type == "context_none":
+            B_X, S_X, H_X = x.shape
+            x = x.view(B_X * S_X, H_X)
+        
+        if os.environ.get('MIX_TYPE', 'SET') == 'SET':
+            for i, theta in enumerate(self.mlp_theta):
+                x = theta(x)
+                if i <= self.mixing_layer:
+                    context = theta(context)
+                if mixer_phi != None and i == self.mixing_layer:
+                    context = context.view(B, S, -1)
+                    
+                    if embed_type != None and embed_type == "context_none":
+                        x = x.view(B_X, S_X, -1)
+                    
+                    if os.environ.get("MIXING_X_DEFAULT", "xmix") == "xmix":
+                        x, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
+                    elif os.environ.get("MIXING_X_DEFAULT", "xmix") == "xmix_x" or os.environ.get("MIXING_X_DEFAULT", "xmix") == "mix_x":
+                        raise Exception()
+                        x_mixed, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
+                        print('#### x_mixed ', x_mixed.shape)
+                        print('#### x bef concat', x.shape)
+                        fusion_input = torch.cat([x, x_mixed], dim=1)
+                        x = self.fusion_mlp(fusion_input)
+                        print('#### x aft concat', x.shape)
+                        # breakpoint()
+                    else:
+                        raise Exception()
+                
+                if i == len(self.mlp_theta) - 2 and embed_type != None and "2nd_last" in embed_test:
+                    embedding_list.append(x.detach().cpu())
+                    if embed_type == "train_context":
+                        label_list.append(torch.full((x.shape[0],), 0))
+                    elif embed_type == "context_none":
+                        label_list.append(torch.full((x.shape[0],), -1))
+                    elif embed_type == "train_none":
+                        label_list.append(torch.full((x.shape[0],), 1))
+                    elif embed_type == "mvalid_none":
+                        label_list.append(torch.full((x.shape[0],), 2))
 
+                    elif embed_type == "ood1_none":
+                        label_list.append(torch.full((x.shape[0],), 3))
+
+                    elif embed_type == "ood2_none":
+                        label_list.append(torch.full((x.shape[0],), 4))
+                    else:
+                        raise Exception()
+            #context = context.view(B, S, -1)
+            #x_mixed = mixer_phi(x_real=x, x_context=context)
+            #y_hat= self.head_theta(x_mixed)
+            
+        elif os.environ.get('MIX_TYPE', 'SET') == 'MIXUP' or os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP':
+            raise Exception()
+            # if embed_type != None and "setenc" in embed_test:
+            #     raise Exception()
+            
+            if os.environ.get('MIX_TYPE', 'SET') == 'MIXUP':
+                x, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
+                
+                # x, lam = self.mixup_x_with_context(x, context, sencoder_layer, alpha=1.0)
+                for i, theta in enumerate(self.mlp_theta):
+                    x = theta(x)
+                    # if i <= self.mixing_layer:
+                    #     context = theta(context)
+                        
+                    # if mixer_phi != None and i == self.mixing_layer:
+                    #     context = context.view(B, S, -1)
+                        
+                    #     if embed_type != None and embed_type == "context_none":
+                    #         x = x.view(B_X, S_X, -1)
+                        
+                    #     if os.environ.get("MIXING_X_DEFAULT", "xmix") == "xmix":
+                    #         x, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
+                    #     elif os.environ.get("MIXING_X_DEFAULT", "xmix") == "xmix_x" or os.environ.get("MIXING_X_DEFAULT", "xmix") == "mix_x":
+                    #         raise Exception()
+                    #         x_mixed, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
+                    #         print('#### x_mixed ', x_mixed.shape)
+                    #         print('#### x bef concat', x.shape)
+                    #         fusion_input = torch.cat([x, x_mixed], dim=1)
+                    #         x = self.fusion_mlp(fusion_input)
+                    #         print('#### x aft concat', x.shape)
+                    #         # breakpoint()
+                    #     else:
+                    #         raise Exception()
+                    
+                    if i == len(self.mlp_theta) - 2 and embed_type != None and "2nd_last" in embed_test:
+                        embedding_list.append(x.detach().cpu())
+                        if embed_type == "train_context":
+                            label_list.append(torch.full((x.shape[0],), 0))
+                        elif embed_type == "context_none":
+                            label_list.append(torch.full((x.shape[0],), -1))
+                        elif embed_type == "train_none":
+                            label_list.append(torch.full((x.shape[0],), 1))
+                        elif embed_type == "mvalid_none":
+                            label_list.append(torch.full((x.shape[0],), 2))
+
+                        elif embed_type == "ood1_none":
+                            label_list.append(torch.full((x.shape[0],), 3))
+
+                        elif embed_type == "ood2_none":
+                            label_list.append(torch.full((x.shape[0],), 4))
+                        else:
+                            raise Exception()
+                
+            elif os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP':
+                for i, theta in enumerate(self.mlp_theta):
+                    x = theta(x)
+                    if i <= self.mixing_layer:
+                        context = theta(context)
+                    if i == self.mixing_layer:
+                        context = context.view(B, S, -1)
+                        
+                        if embed_type != None and embed_type == "context_none":
+                            x = x.view(B_X, S_X, -1)
+                        
+                        x, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
+                        
+                    if i == len(self.mlp_theta) - 2 and embed_type != None and "2nd_last" in embed_test:
+                        embedding_list.append(x.detach().cpu())
+                        if embed_type == "train_context":
+                            label_list.append(torch.full((x.shape[0],), 0))
+                        elif embed_type == "context_none":
+                            label_list.append(torch.full((x.shape[0],), -1))
+                        elif embed_type == "train_none":
+                            label_list.append(torch.full((x.shape[0],), 1))
+                        elif embed_type == "mvalid_none":
+                            label_list.append(torch.full((x.shape[0],), 2))
+
+                        elif embed_type == "ood1_none":
+                            label_list.append(torch.full((x.shape[0],), 3))
+
+                        elif embed_type == "ood2_none":
+                            label_list.append(torch.full((x.shape[0],), 4))
+                        else:
+                            raise Exception()
+            else:
+                raise Exception()
+
+        if embed_type != None and "lastlayer" in embed_test:
+            embedding_list.append(x.detach().cpu())
+            if embed_type == "train_context":
+                label_list.append(torch.full((x.shape[0],), 0))
+            elif embed_type == "context_none":
+                label_list.append(torch.full((x.shape[0],), -1))
+            elif embed_type == "train_none":
+                label_list.append(torch.full((x.shape[0],), 1))
+            elif embed_type == "mvalid_none":
+                label_list.append(torch.full((x.shape[0],), 2))
+
+            elif embed_type == "ood1_none":
+                label_list.append(torch.full((x.shape[0],), 3))
+
+            elif embed_type == "ood2_none":
+                label_list.append(torch.full((x.shape[0],), 4))
+            else:
+                raise Exception()
+            
+        y_hat= self.head_theta(x)
+        return y_hat, embedding_list, label_list
+        
 def initialize_weights(model):
     def initialize(m):
         if isinstance(m, nn.Linear):
