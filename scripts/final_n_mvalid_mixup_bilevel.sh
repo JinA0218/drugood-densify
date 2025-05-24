@@ -42,7 +42,7 @@ launch_job() {
   MIX_TYPE=MIXUP_BILEVEL \
   RANDOM_YV=1 \
   SAVE_TSNE_MODEL=0 \
-  MVALID_DEFAULT=N_MVALID_MIXUP_BILEVEL_NL3_HD64 \
+  MVALID_DEFAULT=N_MVALID_MIXUP_BILEVEL_NL3_HD64_re \
   PYTHONPATH=. \
   python main_merck_all_real_mixup_n_context_n_mvalid.py \
     --sencoder "$se" \

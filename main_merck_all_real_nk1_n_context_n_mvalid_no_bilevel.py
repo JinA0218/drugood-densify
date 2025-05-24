@@ -153,7 +153,7 @@ def get_dataset(args, test=False):
 
             # validset for outer loop
             
-            if os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']:
+            if os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MANIFOLD_MIXUP']:
                 # 'MIXUP_BILEVEL' 'MANIFOLD_MIXUP_BILEVEL' has mvalidset
                 mvalidset = None
             else:
@@ -864,7 +864,7 @@ class Trainer:
         self.best_mse_valid_state_dict_mixer_phi = deepcopy(self.mixer_phi.state_dict())
 
         trainloader = InfIterator(self.trainloader)
-        # mvalidloader = InfIterator(self.mvalidloader)
+        mvalidloader = InfIterator(self.mvalidloader)
         contextloader = InfIterator(self.contextloader)
         
 
@@ -891,14 +891,15 @@ class Trainer:
                     raise Exception() # TODO implement for tsne
                     context=None
 
-                # model w/o bilevel, w/ context
-                # self.model : (x_train, context)
-                # mixer : (x_mvalid, random_y)
                 y_hat_mixed, _, _ = self.model(x=x, context=context, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
-                loss_model = self.calc_loss(y_hat_mixed.squeeze(), y.squeeze()) # TODO why y squeeze?
                 
+                loss_model = self.calc_loss(y_hat_mixed.squeeze(), y.squeeze()) # TODO why y squeeze?
+
                 x_v, y_v = next(mvalidloader)
+
                 if os.environ.get('RANDOM_YV', '0') =='1':
+                    # print('y_v ', y_v.shape)
+                    # breakpoint()
                     y_v = torch.randn_like(y_v)
 
                 context_v = None
@@ -906,8 +907,7 @@ class Trainer:
                 
                 # y_v_hat = y_v_hat[:, 0]
                 L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
-
-                # TODO delete SET_NO_BILEVEL_MIX_LABEL in other files
+                
                 total_loss = loss_model + L_V
                 
                 tlosses.append(total_loss.item())
@@ -919,35 +919,6 @@ class Trainer:
                     all_params = list(self.model.parameters()) + list(self.mixer_phi.parameters())
                     torch.nn.utils.clip_grad_norm_(all_params, max_norm=1.0)
                     self.optimizer.step()
-
-                # WRONG IMPLEMENTATION
-                # y_hat, _, _ = self.model(x=x, context=None, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
-                
-                    
-                # loss_model = self.calc_loss(y_hat.squeeze(), y.squeeze()) # TODO why y squeeze?
-                
-                # loss_mixer = None
-                # if os.environ.get('SET_NO_BILEVEL_MIX_LABEL', 'true_y') == 'true_y':
-                #     y_hat_mixed, _, _ = self.model(x=x, context=context, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
-                #     loss_mixer = self.calc_loss(y_hat_mixed.squeeze(), y.squeeze())
-                    
-                # elif os.environ.get('SET_NO_BILEVEL_MIX_LABEL', 'random') == 'random':
-                #     y_hat_mixed, _, _ = self.model(x=x, context=context, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
-                #     loss_mixer = self.calc_loss(y_hat_mixed.squeeze(), torch.randn_like(y).squeeze())
-                # else:
-                #     raise Exception()
-                
-                # total_loss = loss_model + loss_mixer
-                
-                # tlosses.append(total_loss.item())
-
-                # if self.optimizer is not None:
-                #     self.optimizer.zero_grad()
-                #     total_loss.backward()
-                    
-                #     all_params = list(self.model.parameters()) + list(self.mixer_phi.parameters())
-                #     torch.nn.utils.clip_grad_norm_(all_params, max_norm=1.0)
-                #     self.optimizer.step()
                 
             vmse = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
 
@@ -1192,7 +1163,7 @@ if __name__ == '__main__':
             "inner_episodes": [10],
             "outer_episodes": [50],
             "n_mvalid": [1, 6, 16],
-            "sencoder_layer" : ["max", ] # "sum", "max", "pma", "mean"
+            # "sencoder_layer" : ["max", ] # "sum", "max", "pma", "mean"
         }
 
         hyper_map = {
@@ -1207,8 +1178,8 @@ if __name__ == '__main__':
                     "inner_episodes": inner_episodes,
                     "outer_episodes": outer_episodes,
                     "n_mvalid":n_mvalid,
-                    "sencoder_layer":sencoder_layer,
-                } for i, (lr, clr, num_layers, hidden_dim, optimizer, n_context, dropout, inner_episodes, outer_episodes, n_mvalid, sencoder_layer) \
+                    # "sencoder_layer":sencoder_layer,
+                } for i, (lr, clr, num_layers, hidden_dim, optimizer, n_context, dropout, inner_episodes, outer_episodes, n_mvalid) \
                         in enumerate(itertools.product(*[hyper_grid[k] for k in hyper_grid.keys()]))
         }
 
@@ -1219,7 +1190,7 @@ if __name__ == '__main__':
         # if os.environ.get('RANDOM_YV', '0') == '1':
         #     path = f"experiments_/hyper_search_{args.sencoder}_n_mvalid_real"
         # else:
-        path = f"experiments4/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}_no_bilvel"
+        path = f"experiments5/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}_no_bilevel"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -1258,8 +1229,10 @@ if __name__ == '__main__':
                 
                 optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd, mixer_phi=mixer_phi)
                 
-                # NOTE we don't use optimizermixer anyway
-                optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
+                optimizermixer = None
+        
+                if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
+                    optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
 
                 trainer = Trainer(model=model.to(args.device), \
                                   mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
@@ -1559,6 +1532,46 @@ if __name__ == '__main__':
         #     'inner_episodes': 10, 'outer_episodes': 50,
         #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
         # },
+
+
+        # ### 1. max tuned (lr=0.01, num_layers=3), hd=64
+        ("hivprot", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50, 
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+        ("hivprot", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1 # ORIGIN PMA
+        },
+        ("dpp4", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 16
+        },
+        ("dpp4", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+        ("nk1", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+        ("nk1", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+
 
         ### 1. sum tuned
         # ("hivprot", "count", "strans"): {

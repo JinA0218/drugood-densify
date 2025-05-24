@@ -1284,7 +1284,7 @@ if __name__ == '__main__':
     args = get_arguments()
 
     if os.environ.get("HYPER_SWEEP", "0") == "1":
-        datasets = ["nk1", "dpp4", ] # "hivprot", 
+        datasets = ["hivprot", "dpp4", "nk1", ] # "hivprot", 
         featurizations = ["count", "bit"]
 
         arg_map = {i: (d, f) for i, (d, f) in enumerate(itertools.product(datasets, featurizations))}
@@ -1485,24 +1485,24 @@ if __name__ == '__main__':
             'inner_episodes': 10, 'outer_episodes': 50,
             'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
         },
-        # ("dpp4", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
-        # },
-        # ("nk1", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1 # , "sencoder_layer": 'max',
-        # },
-        # ("nk1", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
-        # },
+        ("dpp4", "bit", "dsets"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+        },
+        ("nk1", "count", "dsets"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+        },
+        ("nk1", "bit", "dsets"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', 'n_mvalid': 16 # , "sencoder_layer": 'max',
+        },
 
 
 
