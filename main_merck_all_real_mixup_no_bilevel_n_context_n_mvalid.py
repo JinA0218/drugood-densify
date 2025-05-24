@@ -1215,10 +1215,10 @@ if __name__ == '__main__':
         arg_map = {i: (d, f) for i, (d, f) in enumerate(itertools.product(datasets, featurizations))}
 
         hyper_grid = {
-            "lr": [1e-3, 1e-4],
+            "lr": [1e-3, ], # 1e-4
             "clr": [1e-5],
-            "num_layers": [3, 4],
-            "hidden_dim": [32, 64],
+            "num_layers": [3, ], # 4
+            "hidden_dim": [64], # 32, 
             "optimizer": ['adamwschedulefree'],
             "n_context": [1, 4, 8],
             "dropout": [0.5],
@@ -1280,7 +1280,11 @@ if __name__ == '__main__':
                 mixer_phi = get_mixer(args=args)
                 
                 optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd, mixer_phi=mixer_phi)
-                optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
+                optimizermixer = None
+
+                if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL', 'MIXUP_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
+                    optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
+
 
                 trainer = Trainer(model=model.to(args.device), \
                                   mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
@@ -1498,7 +1502,7 @@ if __name__ == '__main__':
         
         optimizermixer = None
         
-        if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
+        if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL', 'MIXUP_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
             optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
         
 

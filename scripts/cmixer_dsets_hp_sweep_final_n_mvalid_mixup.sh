@@ -4,12 +4,12 @@ mkdir -p logs
 sencoder="dsets"
 sencoder_layer="max"
 
-total_configs=72
-num_jobs=12
+total_configs=9
+num_jobs=3
 configs_per_job=$((total_configs / num_jobs))
 gpus=(0 1 2)
 job_id=0
-max_parallel_jobs=2  # controls how many jobs run concurrently
+max_parallel_jobs=1  # controls how many jobs run concurrently
 
 for ((i = 0; i < num_jobs; i++)); do
   START=$((i * configs_per_job))

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-targets=('nk1') # 'hivprot' 'dpp4' 
+targets=('hivprot' 'dpp4' 'nk1') # 'hivprot' 'dpp4' 
 sencoders=('strans') #  ==manmixup
 max_parallel_jobs=6
-gpu_list=(2 6)   # You can extend this: (0 1 2 3)
+gpu_list=(4 5 6)   # You can extend this: (0 1 2 3)
 num_gpus=${#gpu_list[@]}
 job_id=0
 
@@ -42,7 +42,7 @@ launch_job() {
   MIX_TYPE=MANIFOLD_MIXUP \
   RANDOM_YV=1 \
   SAVE_TSNE_MODEL=0 \
-  MVALID_DEFAULT=N_MVALID_MANIFOLD_MIXUP_NL3_HD64 \
+  MVALID_DEFAULT=N_MVALID_MANIFOLD_MIXUP_NL3_HD64_0 \
   PYTHONPATH=. \
   python main_merck_all_real_mixup_no_bilevel_n_context_n_mvalid.py \
     --sencoder "$se" \
@@ -74,7 +74,7 @@ launch_job() {
 
 # Main loop
 for ds in "${targets[@]}"; do
-  for vt in count; do # bit
+  for vt in count bit; do # bit
     for se in "${sencoders[@]}"; do
       launch_job "$ds" "$vt" "$se" "$job_id"
 

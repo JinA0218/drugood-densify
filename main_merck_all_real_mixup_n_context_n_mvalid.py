@@ -805,7 +805,10 @@ class Trainer:
         mvalidloader = InfIterator(self.mvalidloader)
         contextloader = InfIterator(self.contextloader)
 
-        self.optimizermixer.train()
+        assert os.environ.get('MIX_TYPE', 'SET') in ['MIXUP_BILEVEL', 'MANIFOLD_MIXUP_BILEVEL']
+        if os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP_BILEVEL':
+            self.optimizermixer.train()
+        
         for episode in tqdm(range(self.args.outer_episodes), ncols=75, leave=False):
             tlosses = []
             for k in tqdm(range(self.args.inner_episodes), ncols=75, leave=False):
@@ -843,65 +846,137 @@ class Trainer:
                                          x=x, y=y, context=context, context_y=context_y, device=self.args.device, interp_loss=True)
                 tlosses.append(train_loss.item())
 
-            # Compute hypergradients
-            x_t, y_t = next(trainloader)  # self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
-            context_t, context_y_t = next(contextloader)
-            context_t = context_t.reshape(self.args.batch_size, -1, context_t.size(-1))
-            if args.n_context > 1:
-                n = torch.randint(1, context_t.size(1), size=(1,)).item()
-                context_t = context_t[:, :n]
+            if os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP_BILEVEL':
+                # Compute hypergradients
+                x_t, y_t = next(trainloader)  # self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
+                context_t, context_y_t = next(contextloader)
+                context_t = context_t.reshape(self.args.batch_size, -1, context_t.size(-1))
+                if args.n_context > 1:
+                    n = torch.randint(1, context_t.size(1), size=(1,)).item()
+                    context_t = context_t[:, :n]
+                    
+                    # if args.tsne_plot and args.embed_test == "base_cX_mO":
+                    #     context_y_t = context_y_t.reshape(self.args.batch_size, -1)
+                    #     context_y_t = context_y_t[:, :n].reshape(-1)
+
+                L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
+                                context=context_t, context_y=context_y_t, device=self.args.device)
+
+                # self.model.eval()
+                # self.mixer_phi.eval()
+                x_v, y_v = next(mvalidloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
                 
-                # if args.tsne_plot and args.embed_test == "base_cX_mO":
-                #     context_y_t = context_y_t.reshape(self.args.batch_size, -1)
-                #     context_y_t = context_y_t[:, :n].reshape(-1)
-
-            L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
-                              context=context_t, context_y=context_y_t, device=self.args.device)
-
-            # self.model.eval()
-            # self.mixer_phi.eval()
-            x_v, y_v = next(mvalidloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
-            
-            if os.environ.get('RANDOM_YV', '0') =='1':
-                # print('y_v ', y_v.shape)
-                # breakpoint()
-                y_v = torch.randn_like(y_v)
-            
-            # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
-            
-            # if episode == 0:
-            #     print('====')
-            #     print('x_v ', x_v)
-            #     print('====')
-            #     print('y_v ', y_v)
-
-            #     torch.save(x_v, f'train_ours_x_v.pt')
-            #     torch.save(y_v, f'train_ours_y_v.pt')
-            
-            context_v = None
-            if args.tsne_plot and episode == self.args.outer_episodes - 1:
-                raise Exception()
-                y_v_hat, self.embedding_list, self.label_list = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=self.embedding_list, label_list=self.label_list, embed_type="mvalid_none", embed_test=self.args.embed_test)
-                L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
-                self.loss_list.append(torch.full((x_v.shape[0],), L_V.detach().item()))
+                if os.environ.get('RANDOM_YV', '0') =='1':
+                    # print('y_v ', y_v.shape)
+                    # breakpoint()
+                    y_v = torch.randn_like(y_v)
                 
+                # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+                
+                # if episode == 0:
+                #     print('====')
+                #     print('x_v ', x_v)
+                #     print('====')
+                #     print('y_v ', y_v)
+
+                #     torch.save(x_v, f'train_ours_x_v.pt')
+                #     torch.save(y_v, f'train_ours_y_v.pt')
+                
+                context_v = None
+                if args.tsne_plot and episode == self.args.outer_episodes - 1:
+                    raise Exception()
+                    y_v_hat, self.embedding_list, self.label_list = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=self.embedding_list, label_list=self.label_list, embed_type="mvalid_none", embed_test=self.args.embed_test)
+                    L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
+                    self.loss_list.append(torch.full((x_v.shape[0],), L_V.detach().item()))
+                    
+                else:
+                    y_v_hat, _, __ = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
+                    
+                    # y_v_hat = y_v_hat[:, 0]
+                    L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
+                
+                def w():
+                    return self.model.parameters()
+
+                hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=w, i=5, alpha=self.args.lr)
+
+                self.optimizermixer.zero_grad()
+                for p, g in zip(self.mixer_phi.parameters(), hgrads):
+                    hypergrad = torch.clamp(g, -5.0, 5.0)
+                    # hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
+                    p.grad = hypergrad
+                self.optimizermixer.step()
+
+            elif os.environ.get('MIX_TYPE', 'SET') == 'MIXUP_BILEVEL':
+                # Compute hypergradients
+                # x_t, y_t = next(trainloader)  # self.trainloader.dataset.get_batch(batch_size=50*self.args.train_batch_size)
+                # context_t, context_y_t = next(contextloader)
+                # context_t = context_t.reshape(self.args.batch_size, -1, context_t.size(-1))
+                # if args.n_context > 1:
+                #     n = torch.randint(1, context_t.size(1), size=(1,)).item()
+                #     context_t = context_t[:, :n]
+                    
+                #     # if args.tsne_plot and args.embed_test == "base_cX_mO":
+                #     #     context_y_t = context_y_t.reshape(self.args.batch_size, -1)
+                #     #     context_y_t = context_y_t[:, :n].reshape(-1)
+
+                # L_T = train_mixer(model=self.model, optimizer=None, mixer_phi=self.mixer_phi, x=x_t, y=y_t, \
+                #                 context=context_t, context_y=context_y_t, device=self.args.device)
+
+                # self.model.eval()
+                # self.mixer_phi.eval()
+                x_v, y_v = next(mvalidloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+                
+                if os.environ.get('RANDOM_YV', '0') =='1':
+                    # print('y_v ', y_v.shape)
+                    # breakpoint()
+                    y_v = torch.randn_like(y_v)
+                
+                # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
+                
+                # if episode == 0:
+                #     print('====')
+                #     print('x_v ', x_v)
+                #     print('====')
+                #     print('y_v ', y_v)
+
+                #     torch.save(x_v, f'train_ours_x_v.pt')
+                #     torch.save(y_v, f'train_ours_y_v.pt')
+                
+                context_v = None
+                if args.tsne_plot and episode == self.args.outer_episodes - 1:
+                    raise Exception()
+                    y_v_hat, self.embedding_list, self.label_list = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=self.embedding_list, label_list=self.label_list, embed_type="mvalid_none", embed_test=self.args.embed_test)
+                    L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
+                    self.loss_list.append(torch.full((x_v.shape[0],), L_V.detach().item()))
+                    
+                else:
+                    y_v_hat, _, __ = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
+                    
+                    # y_v_hat = y_v_hat[:, 0]
+                    L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
+                
+                def w():
+                    return self.model.parameters()
+
+                if self.optimizer is not None:
+                    self.optimizer.train()
+
+                    self.optimizer.zero_grad()
+                    L_V.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    self.optimizer.step()
+
+                # hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=w, i=5, alpha=self.args.lr)
+
+                # self.optimizermixer.zero_grad()
+                # for p, g in zip(self.mixer_phi.parameters(), hgrads):
+                #     hypergrad = torch.clamp(g, -5.0, 5.0)
+                #     # hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
+                #     p.grad = hypergrad
+                # self.optimizermixer.step()
             else:
-                y_v_hat, _, __ = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
-                
-                # y_v_hat = y_v_hat[:, 0]
-                L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
-            
-            def w():
-                return self.model.parameters()
-
-            hgrads = hypergradients(L_V=L_V, L_T=L_T, lmbda=self.mixer_phi.parameters, w=w, i=5, alpha=self.args.lr)
-
-            self.optimizermixer.zero_grad()
-            for p, g in zip(self.mixer_phi.parameters(), hgrads):
-                hypergrad = torch.clamp(g, -5.0, 5.0)
-                # hypergrad *= 1.0 - (episode / (self.args.outer_episodes))
-                p.grad = hypergrad
-            self.optimizermixer.step()
+                raise Exception()
             
             # Run model on validation set.
             vmse = self.test(dataloader=self.validloader, mixer_phi=self.mixer_phi)
@@ -1209,16 +1284,16 @@ if __name__ == '__main__':
     args = get_arguments()
 
     if os.environ.get("HYPER_SWEEP", "0") == "1":
-        datasets = ["hivprot", "dpp4", "nk1"]
+        datasets = ["nk1", "dpp4", ] # "hivprot", 
         featurizations = ["count", "bit"]
 
         arg_map = {i: (d, f) for i, (d, f) in enumerate(itertools.product(datasets, featurizations))}
 
         hyper_grid = {
-            "lr": [1e-3, 1e-4],
+            "lr": [1e-3,], #  1e-4
             "clr": [1e-5],
-            "num_layers": [3, 4],
-            "hidden_dim": [32, 64],
+            "num_layers": [3,], #  4
+            "hidden_dim": [64], # 32, 
             "optimizer": ['adamwschedulefree'],
             "n_context": [1, 4, 8],
             "dropout": [0.5],
@@ -1280,7 +1355,12 @@ if __name__ == '__main__':
                 mixer_phi = get_mixer(args=args)
                 
                 optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd, mixer_phi=mixer_phi)
-                optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
+                
+                optimizermixer = None
+
+                if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL', 'MIXUP_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
+                    optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
+
 
                 trainer = Trainer(model=model.to(args.device), \
                                   mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
@@ -1347,18 +1427,57 @@ if __name__ == '__main__':
         #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
         # },
 
-        ### ALL MIXUP BILEVEL lr=0.01, 'num_layers': 3, 'hidden_dim': 64,
-        ("hivprot", "count", "dsets"): {
+        ### [original impl.] ALL MIXUP BILEVEL lr=0.01, 'num_layers': 3, 'hidden_dim': 64,
+        # ("hivprot", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+        # },
+        # ("hivprot", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
+        # },
+        # ("dpp4", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+        # },
+        # ("dpp4", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
+        # },
+        # ("nk1", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 1 # , "sencoder_layer": 'max',
+        # },
+        # ("nk1", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+        # },
+
+
+        ### [updated impl. stepping w self.optim, loss with L_V] ALL MIXUP BILEVEL lr=0.01, 'num_layers': 3, 'hidden_dim': 64,
+         ("hivprot", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+            'sencoder': 'dsets', 'n_mvalid': 1 # , "sencoder_layer": 'max',
         },
         ("hivprot", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
+            'sencoder': 'dsets', 'n_mvalid': 16 # , "sencoder_layer": 'max',
         },
         ("dpp4", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
@@ -1366,24 +1485,26 @@ if __name__ == '__main__':
             'inner_episodes': 10, 'outer_episodes': 50,
             'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
         },
-        ("dpp4", "bit", "dsets"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
-        },
-        ("nk1", "count", "dsets"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', 'n_mvalid': 1 # , "sencoder_layer": 'max',
-        },
-        ("nk1", "bit", "dsets"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
-        },
+        # ("dpp4", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
+        # },
+        # ("nk1", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 1 # , "sencoder_layer": 'max',
+        # },
+        # ("nk1", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
+        # },
+
+
 
         # ### ALL MANIFOLD MIXUP BILEVEL
         # ("hivprot", "count", "strans"): {
@@ -1498,7 +1619,7 @@ if __name__ == '__main__':
         
         optimizermixer = None
         
-        if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
+        if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL', 'MIXUP_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
             optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
         
 

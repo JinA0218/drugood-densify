@@ -57,7 +57,8 @@ def get_optimizer(optimizer, model, lr, wd, mixer_phi=None):
     def eval(self):
         pass
     
-    if mixer_phi is not None and os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']:
+    # but MIXUP_BILEVEL, MIXUP doesn't use mixer_phi
+    if mixer_phi is not None and os.environ.get('MIX_TYPE', 'SET') in ['MANIFOLD_MIXUP', 'SET_NO_BILEVEL', ]: # 'MIXUP', 
         params = list(model.parameters()) + list(mixer_phi.parameters())
         if optimizer == 'adamw':
             optim = torch.optim.AdamW(params, lr=lr, weight_decay=wd)

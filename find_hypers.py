@@ -28,9 +28,9 @@ if __name__ == "__main__":
     for model in ["dsets"]: # "dsets", 
         # d = f"experiments/hyper_search_{model}_n_mvalid_real_ryv1/"
         # d = f"experiments/hyper_search_{model}_MANIFOLD_MIXUP_BILEVEL_n_mvalid_real/"
-        # d = f"experiments/hyper_search_{model}_MIXUP_BILEVEL_n_mvalid_real/"
+        d = f"experiments/hyper_search_{model}_MIXUP_BILEVEL_n_mvalid_real/"
         # d = f"experiments/hyper_search_{model}_MIXUP_real/"
-        d = f"experiments/hyper_search_{model}_MANIFOLD_MIXUP_real/"
+        # d = f"experiments/hyper_search_{model}_MANIFOLD_MIXUP_real/"
         print("=" * 20 + f"OURS {model}" + "=" * 20)
         files = os.listdir(d)
 

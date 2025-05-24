@@ -42,7 +42,7 @@ launch_job() {
   CUDA_VISIBLE_DEVICES=$gpu_id \
   RANDOM_YV=1 \
   SAVE_TSNE_MODEL=0 \
-  MVALID_DEFAULT=N_MVALID_STRANS_NL3_HD64_2 \
+  MVALID_DEFAULT=N_MVALID_STRANS_NL3_HD64_max \
   PYTHONPATH=. \
   python main_merck_all_real_nk1_n_context_n_mvalid.py \
     --sencoder "$se" \

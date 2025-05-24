@@ -1528,6 +1528,46 @@ if __name__ == '__main__':
         #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
         # },
 
+
+        # ### 1. max tuned (lr=0.01, num_layers=3), hd=64
+        ("hivprot", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50, 
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+        ("hivprot", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1 # ORIGIN PMA
+        },
+        ("dpp4", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 16
+        },
+        ("dpp4", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+        ("nk1", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+        ("nk1", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+        },
+
+
         ### 1. sum tuned
         # ("hivprot", "count", "strans"): {
         #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
