@@ -1,33 +1,27 @@
 # #!/bin/bash
 mkdir -p logs
 
-targets=('nk1') #    'dpp4' 'nk1'
-sencoders=('strans') #    'strans'
-mixing_layers=(0)  #  1 2
-
-
-gpus=(1 2)
+targets=('hivprot' 'dpp4' 'nk1') #   'hivprot' 'dpp4' 'nk1'
+sencoders=('dsets' 'strans') #  'dsets' 'strans'
+gpus=(0 1 2 3)
 gpu_count=${#gpus[@]}
-max_jobs_per_gpu=6
+max_jobs_per_gpu=8
 job_id=0
-
-# embed_tests=('2nd_last_ours_best') #  'setenc_ours_best' lastlayer_ours_best
-# embed_tests=('lastlayer_ours_best' 'lastlayer_base_cX_mO' 'setenc_ours_best' 'setenc_base_cX_mO' 'lastlayer_base_cX_mX')
 
 active_pids=()
 
 for ds in "${targets[@]}"; do
-    for vt in bit; do #  bit
+    for vt in count bit; do  # vec_type loop
         for sencoder in "${sencoders[@]}"; do
-            # for sl in mean max sum; do
-            for ml in "${mixing_layers[@]}"; do
+            for n_mvalid in 1 6 16; do  # innermost loop
                 gpu_id=${gpus[$((job_id % gpu_count))]}
 
-                echo "Launching job $job_id on GPU $gpu_id | ds=$ds | md=($md1,$md2) | vt=$vt | sencoder=$sencoder | mixing_layer=$ml"
-                mix_default_type="xmix"
-                MIXUP_EPOCHS=10 MIX_TYPE=MIXUP RANDOM_YV=1 SAVE_TSNE_MODEL=1 MVALID_DEFAULT=MIXUP_NO_BILEVEL_REAL3 MIXING_X_DEFAULT=$mix_default_type CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real_mixup.py \
+                echo "Launching job $job_id on GPU $gpu_id | ds=$ds | vt=$vt | sencoder=$sencoder | n_mvalid=$n_mvalid"
+
+                RANDOM_YV=1 SAVE_TSNE_MODEL=0 MVALID_DEFAULT=NMVALID_POC CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real_nk1_n_context_n_mvalid.py \
                     --sencoder "$sencoder" \
                     --model mlp \
+                    --mixer_phi True \
                     --optimizer adamwschedulefree \
                     --seed 42 \
                     --lr 1e-3 \
@@ -50,31 +44,33 @@ for ds in "${targets[@]}"; do
                     --dataset "$ds" \
                     --same_setting \
                     --mvalid_dataset None \
-                    --mixer_phi True \
-                    --sencoder_layer max \
-                    --mixing_layer "$ml" 
-                    > logs/job_${job_id}_ds_${ds}_md_${md1}_${md2}_vt_${vt}_se_${sencoder}_mt_${mix_default_type}_ml_${ml// /_}_mixup_final_NO_BUG.log 2>&1 &
+                    --n_mvalid "$n_mvalid" \
+                    > logs/job_${job_id}_ds_${ds}_vt_${vt}_se_${sencoder}_nmv_${n_mvalid}_NMVALID_POC.log 2>&1 &
 
                 ((job_id++))
 
-                # if [[ $job_id -ge 1 ]]; then
+                # Optional job limit
+                # if [[ $job_id -ge 10 ]]; then
                 #     exit 0
                 # fi
 
+                # Wait after a batch of jobs
                 if (( job_id % (gpu_count * 3) == 0 )); then
                     wait
                 fi
-                # done
             done
         done
     done
 done
 
+
 # Final wait for any remaining jobs
-wait
+# if (( ${#active_pids[@]} > 0 )); then
+#     echo " Waiting for final ${#active_pids[@]} jobs..."
+#     wait "${active_pids[@]}"
+# fi
 
-echo "All jobs completed."
-
+echo " All jobs completed."
 
 
 

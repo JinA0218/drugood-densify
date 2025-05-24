@@ -707,9 +707,37 @@ class Trainer:
 
             v2 = approxInverseHVP(v=v1, f=d_LT_dw, w=w, i=i, alpha=alpha)
 
-            v3 = torch.autograd.grad(d_LT_dw, lmbda(), grad_outputs=v2, retain_graph=True)
-            d_LV_dlmbda = torch.autograd.grad(L_V, lmbda())
-            return [d - v for d, v in zip(d_LV_dlmbda, v3)]
+            # for p in lmbda():
+            #     if p.grad is None:
+            #         print("❗ Unused parameter:", p.shape)
+            
+            v3 = torch.autograd.grad(d_LT_dw, lmbda(), grad_outputs=v2, retain_graph=True, allow_unused=True)
+            
+            # for i, (param, grad) in enumerate(zip(lmbda(), v3)):
+            #     if grad is None:
+            #         print(f"❗ Unused parameter #{i}: shape={param.shape}, name={param.__class__.__name__}")
+            
+            # for name, param in self.mixer_phi.named_parameters():
+            #     if param.grad is None:
+            #         print(f"❗ Parameter unused in L_T graph: {name} | shape={param.shape}")
+
+                    # print(f"❗ Parameter unused in L_T graph: {name} | shape={param.shape}")
+            d_LV_dlmbda = torch.autograd.grad(L_V, lmbda(), allow_unused=True)
+            
+            hgrads = []
+            for d, v, p in zip(d_LV_dlmbda, v3, lmbda()):
+                if d is None and v is None:
+                    hgrads.append(torch.zeros_like(p))
+                elif d is None:
+                    hgrads.append(-v)
+                elif v is None:
+                    hgrads.append(d)
+                else:
+                    hgrads.append(d - v)
+            
+            return hgrads
+            
+            # return [d - v for d, v in zip(d_LV_dlmbda, v3)]
 
         def train_mixer(model, optimizer, mixer_phi, x, y, context, context_y, device, interp_loss=False):
             model.train()
@@ -822,7 +850,6 @@ class Trainer:
                 # print('y_v ', y_v.shape)
                 # breakpoint()
                 y_v = torch.randn_like(y_v)
-
             
             # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
             
@@ -890,7 +917,7 @@ class Trainer:
         
 
         # TODO NOTE # iteration could change 
-        for episode in tqdm(range(int(os.environ.get('MIXER_NO_BILEVEL_EPOCHS', 100))), ncols=75, leave=False):
+        for episode in tqdm(range(int(os.environ.get('MIXER_NO_BILEVEL_EPOCHS', 10))), ncols=75, leave=False):
             tlosses = []
 
             self.model.train()
@@ -1062,20 +1089,20 @@ class Trainer:
         
         # NOTE SAVE MODEL FOR TSNE
         if os.environ.get('SAVE_TSNE_MODEL', '0') == '1':
-            path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/" # but embed_test should not effect result 
+            path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/" # but embed_test should not effect result 
             os.makedirs(path, exist_ok=True)
             
             if args.mixer_phi:
                 if args.seed != 42:
-                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}_{args.seed}.pth"
+                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}_{args.seed}.pth"
                 else:
-                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
-                    
+                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
+                
                 torch.save({
                     'model': self.model.state_dict(),
                     'mixer_phi': self.mixer_phi.state_dict(),
                     'optimizer' : self.optimizer.state_dict(),
-                    'mixer_optimizer' : self.optimizermixer.state_dict(),
+                    'mixer_optimizer' : self.optimizermixer.state_dict(), # used in bilevel but not non_bilevel
                     'args': vars(args),  # Save args as a dictionary,
                     'ltmse' : ltmse,
                     'lvmse' : lvmse,
@@ -1083,7 +1110,7 @@ class Trainer:
                     'tmse ': tmse, 
                 }, f_path)
             else:
-                f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
+                f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
                 torch.save({
                     'model': self.model.state_dict(),
                     'optimizer' : self.optimizer.state_dict(),
@@ -1095,7 +1122,7 @@ class Trainer:
                 }, f_path)
             
             print(f'saved >> {f_path}')
-            # exit()
+            exit()
         ######
         
         ### for plotting
@@ -1297,31 +1324,31 @@ if __name__ == '__main__':
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'pma',
+            'sencoder': 'strans'# , "sencoder_layer": 'max',
         },
         ("dpp4", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'pma',
+            'sencoder': 'strans'# , "sencoder_layer": 'max',
         },
         ("dpp4", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'sum',
+            'sencoder': 'strans'# , "sencoder_layer": 'sum',
         },
         ("nk1", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'sum',
+            'sencoder': 'strans',# "sencoder_layer": 'sum',
         },
         ("nk1", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'sum',
+            'sencoder': 'strans'# , "sencoder_layer": 'sum',
         },
     }
 
@@ -1331,12 +1358,11 @@ if __name__ == '__main__':
 
     print(f"running {args.dataset=} {args.vec_type=} with params: {hyperparams}")
 
-    print('SEED ', args.seed)
-    print('SEED ', args.seed >=0)
     if args.seed >= 0:
         set_seed(0)
         if os.environ.get('SAVE_TSNE_MODEL', '0') == '1' and args.seed != 42:
             args.seed = 0 # NOTE JIN using args.seed
+    # args.seed = 0 # NOTE JIN using args.seed
     trainloader, validloader, mvalidloader, testloader, contextloader, ood1_trainloader, ood2_trainloader = get_dataset(args=args, test=True)
 
     for i in range(10):
@@ -1415,7 +1441,7 @@ if __name__ == '__main__':
                         _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
                 else:
                     if os.environ.get('MIX_TYPE', 'SET') == 'SET':
-                        with open(f"./experiments/S-results-{args.sencoder}-{args.sencoder_layer}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_real.txt", "a+") as _f:
+                        with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_real.txt", "a+") as _f:
                             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix')}_test\n")
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

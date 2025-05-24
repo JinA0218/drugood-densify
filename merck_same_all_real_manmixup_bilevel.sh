@@ -6,7 +6,7 @@ mkdir -p logs
 dataset_names=('3a4' 'cb1' 'hivint' 'logd' 'metab' 'ox1' 'ox2' 'pgp' 'ppb' 'rat_f' 'tdi' 'thrombin')
 targets=('hivprot' 'dpp4' 'nk1') #   'hivprot' 'dpp4' 'nk1'
 sencoders=('dsets' 'strans') #  'dsets' 'strans'
-gpus=(0)
+gpus=(3 6)
 gpu_count=${#gpus[@]}
 max_jobs_per_gpu=8
 job_id=0
@@ -34,7 +34,7 @@ for ds in "${targets[@]}"; do
 
                     echo "Launching job $job_id on GPU $gpu_id | ds=$ds | md=($md1,$md2) | vt=$vt | sencoder=$sencoder"
 
-                    RANDOM_YV=1 SAVE_TSNE_MODEL=0 MVALID_DEFAULT=rand_testing CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real.py \
+                    MIXUP_EPOCHS=10 MIX_TYPE=MANIFOLD_MIXUP_BILEVEL RANDOM_YV=1 SAVE_TSNE_MODEL=0 MVALID_DEFAULT=MANIFOLD_MIXUP_BILEVEL4 CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real_mixup.py \
                         --sencoder "$sencoder" \
                         --model mlp \
                         --mixer_phi True \
@@ -59,14 +59,11 @@ for ds in "${targets[@]}"; do
                         --vec_type "$vt" \
                         --dataset "$ds" \
                         --same_setting \
+                        --sencoder_layer max \
                         --mvalid_dataset "$md1" "$md2" \
-                        > logs/job_${job_id}_ds_${ds}_md_${md1}_${md2}_vt_${vt}_se_${sencoder}_rand_test.log 2>&1 &
+                        > logs/job_${job_id}_ds_${ds}_md_${md1}_${md2}_vt_${vt}_se_${sencoder}_MANIFOLD_MIXUP_BILEVEL4.log 2>&1 &
 
                     ((job_id++))
-
-                    if [[ $job_id -ge 10 ]]; then
-                        exit 0
-                    fi
                     # Wait after every batch of 8 jobs (i.e., one per GPU)
                     if (( job_id % (gpu_count * 3) == 0 )); then
                         wait

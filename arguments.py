@@ -20,7 +20,7 @@ def get_arguments():
     parser.add_argument('--sencoder_layer', default='pma', type=str, help='layer type in the set encoder')
 
     parser.add_argument('--vec_type', default='count', type=str, help='bit or count vector (for Merck)')
-    parser.add_argument('--epochs', default=500, type=int, help='number of training epochs.')
+    parser.add_argument('--epochs', default=100, type=int, help='number of training epochs.')
     parser.add_argument('--optimizer', default='adamw', type=str, help='dataset used to train zoo.')
     parser.add_argument('--num_workers', default=8, type=int, help='trainloader number of workers.')
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate.')
@@ -55,6 +55,9 @@ def get_arguments():
     parser.add_argument('--mixing_layer', default=0, type=int, help='number of properties to predict.')
     
     parser.add_argument('--model_no_context', action='store_true')
+    # parser.add_argument('--mixup_epochs', default=300, type=int, help='number of training epochs.')
+    parser.add_argument('--n_mvalid', default=-1, type=int, help='n_mvalid')
+    
     
 
     

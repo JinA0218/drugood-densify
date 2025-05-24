@@ -158,16 +158,19 @@ def get_dataset(args, test=False):
                 mvalidset = None
             else:
                 if os.environ.get('MVALID_DEFAULT', '1') !=  '0':
-                    mvalidset = None
-                    # print('MVALID ', args.mvalid_dataset)
-                    for dataset in args.mvalid_dataset:
-                        _validset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False, mvalid_dataset=args.mvalid_dataset, exclude_mval_data_in_context=args.exclude_mval_data_in_context) # "dpp4", "nk1"
-                        if mvalidset is None:
-                            mvalidset = _validset
-                            continue
+                    if args.n_mvalid < 0:
+                        mvalidset = None
+                        # print('MVALID ', args.mvalid_dataset)
+                        for dataset in args.mvalid_dataset:
+                            _validset = Merck(split="train", vec_type=args.vec_type, dataset=dataset, is_context=False, mvalid_dataset=args.mvalid_dataset, exclude_mval_data_in_context=args.exclude_mval_data_in_context) # "dpp4", "nk1"
+                            if mvalidset is None:
+                                mvalidset = _validset
+                                continue
 
-                        mvalidset.data = torch.cat((mvalidset.data, _validset.data), dim=0)
-                        mvalidset.labels = torch.cat((mvalidset.labels, _validset.labels), dim=0)
+                            mvalidset.data = torch.cat((mvalidset.data, _validset.data), dim=0)
+                            mvalidset.labels = torch.cat((mvalidset.labels, _validset.labels), dim=0)
+                    else:
+                        mvalidset = Merck(split="train", vec_type=args.vec_type, dataset=args.dataset, is_context=True, mvalid_dataset=args.mvalid_dataset, exclude_mval_data_in_context=args.exclude_mval_data_in_context, context_dataset=args.context_dataset)
                 else:
                     mvalidset = copy.deepcopy(validset)
         else:
@@ -410,17 +413,30 @@ def get_dataset(args, test=False):
     )
 
     if mvalidset is not None:
-        mvalidloader = DataLoader(
-            mvalidset,
-            drop_last=True,
-            batch_size=args.batch_size,
-            num_workers=args.num_workers,
-            worker_init_fn=seed_worker,
-            persistent_workers=True,
-            generator=g_mvalid,
-            shuffle=True,
-            pin_memory=True
-        )
+        if args.n_mvalid < 0:
+            mvalidloader = DataLoader(
+                mvalidset,
+                drop_last=True,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                worker_init_fn=seed_worker,
+                persistent_workers=True,
+                generator=g_mvalid,
+                shuffle=True,
+                pin_memory=True
+            )
+        else:
+            mvalidloader = DataLoader(
+                mvalidset,
+                batch_size=args.batch_size * args.n_mvalid,
+                drop_last=True,
+                num_workers=args.num_workers,
+                persistent_workers=True,
+                worker_init_fn=seed_worker,
+                    generator=g_mvalid,
+                    shuffle=True,
+                    pin_memory=True
+            )
     else:
         mvalidloader = None
 
@@ -707,9 +723,37 @@ class Trainer:
 
             v2 = approxInverseHVP(v=v1, f=d_LT_dw, w=w, i=i, alpha=alpha)
 
-            v3 = torch.autograd.grad(d_LT_dw, lmbda(), grad_outputs=v2, retain_graph=True)
-            d_LV_dlmbda = torch.autograd.grad(L_V, lmbda())
-            return [d - v for d, v in zip(d_LV_dlmbda, v3)]
+            # for p in lmbda():
+            #     if p.grad is None:
+            #         print("❗ Unused parameter:", p.shape)
+            
+            v3 = torch.autograd.grad(d_LT_dw, lmbda(), grad_outputs=v2, retain_graph=True, allow_unused=True)
+            
+            # for i, (param, grad) in enumerate(zip(lmbda(), v3)):
+            #     if grad is None:
+            #         print(f"❗ Unused parameter #{i}: shape={param.shape}, name={param.__class__.__name__}")
+            
+            # for name, param in self.mixer_phi.named_parameters():
+            #     if param.grad is None:
+            #         print(f"❗ Parameter unused in L_T graph: {name} | shape={param.shape}")
+
+                    # print(f"❗ Parameter unused in L_T graph: {name} | shape={param.shape}")
+            d_LV_dlmbda = torch.autograd.grad(L_V, lmbda(), allow_unused=True)
+            
+            hgrads = []
+            for d, v, p in zip(d_LV_dlmbda, v3, lmbda()):
+                if d is None and v is None:
+                    hgrads.append(torch.zeros_like(p))
+                elif d is None:
+                    hgrads.append(-v)
+                elif v is None:
+                    hgrads.append(d)
+                else:
+                    hgrads.append(d - v)
+            
+            return hgrads
+            
+            # return [d - v for d, v in zip(d_LV_dlmbda, v3)]
 
         def train_mixer(model, optimizer, mixer_phi, x, y, context, context_y, device, interp_loss=False):
             model.train()
@@ -822,7 +866,6 @@ class Trainer:
                 # print('y_v ', y_v.shape)
                 # breakpoint()
                 y_v = torch.randn_like(y_v)
-
             
             # x_v, y_v = next(trainloader)  # self.validloader.dataset.get_batch(batch_size=self.args.BS*self.args.batch_size)
             
@@ -890,7 +933,7 @@ class Trainer:
         
 
         # TODO NOTE # iteration could change 
-        for episode in tqdm(range(int(os.environ.get('MIXER_NO_BILEVEL_EPOCHS', 100))), ncols=75, leave=False):
+        for episode in tqdm(range(int(os.environ.get('MIXER_NO_BILEVEL_EPOCHS', 10))), ncols=75, leave=False):
             tlosses = []
 
             self.model.train()
@@ -1062,20 +1105,20 @@ class Trainer:
         
         # NOTE SAVE MODEL FOR TSNE
         if os.environ.get('SAVE_TSNE_MODEL', '0') == '1':
-            path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/" # but embed_test should not effect result 
+            path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/" # but embed_test should not effect result 
             os.makedirs(path, exist_ok=True)
             
             if args.mixer_phi:
                 if args.seed != 42:
-                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}_{args.seed}.pth"
+                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}_{args.seed}.pth"
                 else:
-                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
-                    
+                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
+                
                 torch.save({
                     'model': self.model.state_dict(),
                     'mixer_phi': self.mixer_phi.state_dict(),
                     'optimizer' : self.optimizer.state_dict(),
-                    'mixer_optimizer' : self.optimizermixer.state_dict(),
+                    'mixer_optimizer' : self.optimizermixer.state_dict(), # used in bilevel but not non_bilevel
                     'args': vars(args),  # Save args as a dictionary,
                     'ltmse' : ltmse,
                     'lvmse' : lvmse,
@@ -1083,7 +1126,7 @@ class Trainer:
                     'tmse ': tmse, 
                 }, f_path)
             else:
-                f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
+                f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
                 torch.save({
                     'model': self.model.state_dict(),
                     'optimizer' : self.optimizer.state_dict(),
@@ -1095,7 +1138,7 @@ class Trainer:
                 }, f_path)
             
             print(f'saved >> {f_path}')
-            # exit()
+            exit()
         ######
         
         ### for plotting
@@ -1176,10 +1219,12 @@ if __name__ == '__main__':
             "clr": [1e-5],
             "num_layers": [3, 4],
             "hidden_dim": [32, 64],
+            "optimizer": ['adamwschedulefree'],
             "n_context": [1, 4, 8],
             "dropout": [0.5],
             "inner_episodes": [10],
             "outer_episodes": [50],
+            # "n_mvalid": [1, 6, 16]
         }
 
         hyper_map = {
@@ -1188,11 +1233,13 @@ if __name__ == '__main__':
                     "clr": clr,
                     "num_layers": num_layers,
                     "hidden_dim": hidden_dim,
+                    "optimizer": optimizer,
                     "n_context": n_context,
                     "dropout": dropout,
                     "inner_episodes": inner_episodes,
                     "outer_episodes": outer_episodes,
-                } for i, (lr, clr, num_layers, hidden_dim, n_context, dropout, inner_episodes, outer_episodes) \
+                    # "n_mvalid":n_mvalid
+                } for i, (lr, clr, num_layers, hidden_dim, optimizer, n_context, dropout, inner_episodes, outer_episodes) \
                         in enumerate(itertools.product(*[hyper_grid[k] for k in hyper_grid.keys()]))
         }
 
@@ -1200,7 +1247,7 @@ if __name__ == '__main__':
         # print(f"{hyper_map=}")
         # exit()
 
-        path = f"experiments/hyper_search_{args.sencoder}"
+        path = f"experiments/hyper_search_{args.sencoder}_{os.environ.get('MIX_TYPE', 'SET')}_real"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -1208,22 +1255,30 @@ if __name__ == '__main__':
             args.dataset = dataset
             args.vec_type = featurization
 
-            set_seed(10)
-            trainloader, validloader, mvalidloader, testloader, contextloader, ood1_trainloader, ood2_trainloader = get_dataset(args=args, test=False)
-            print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
+            # set_seed(10)
+            # trainloader, validloader, mvalidloader, testloader, contextloader, ood1_trainloader, ood2_trainloader = get_dataset(args=args, test=False)
+            # print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
             for hyper_key in range(int(os.environ["START"]), int(os.environ["STOP"])):
-
+                
+                f_path = f"{path}/nmvalid-{dataset}-{featurization}-{hyper_key}--in{args.num_inner_dataset}.pkl"
+                
+                if os.path.exists(f_path):
+                    # print(f"Skipping {f_path} (already exists)")
+                    continue
+                
                 hypers = hyper_map[hyper_key]
                 print(f"running with hypers: {hypers=}")
                 for k, v in hypers.items():
                     setattr(args, k, v)
 
                 set_seed(10)
+                trainloader, validloader, mvalidloader, testloader, contextloader, ood1_trainloader, ood2_trainloader = get_dataset(args=args, test=False)
+                print('Trainset: {} ValidSet: {} TestSet: {}'.format(len(trainloader.dataset), len(validloader.dataset), len(testloader.dataset)))
+
 
                 model = get_model(args=args)
                 mixer_phi = get_mixer(args=args)
                 
-                raise Exception() # TODO need to w/o bilevel consider 
                 optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd, mixer_phi=mixer_phi)
                 optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
 
@@ -1236,13 +1291,13 @@ if __name__ == '__main__':
                                   mvalidloader=mvalidloader, \
                                   contextloader=contextloader, \
                                   testloader=testloader, \
+                                  ood1_trainloader=ood1_trainloader, \
+                                  ood2_trainloader=ood2_trainloader, \
                                   args=args,
                                   )
                 
-                breakpoint()
-
                 _, _, vmse, _ = trainer.fit()
-                with open(f"{path}/{dataset}-{featurization}-{hyper_key}--in{args.num_inner_dataset}.pkl", "wb") as f:
+                with open(f_path, "wb") as f:
                     pickle.dump({"mse": vmse, **hypers}, f)
 
         exit("exiting after hyperparameter sweep")
@@ -1250,78 +1305,160 @@ if __name__ == '__main__':
     losses = []
     last_losses = []
 
+    
+    # TODO need to fill in
     best_hypers = {
+
+        # # ALL
+        # ("hivprot", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', "sencoder_layer": 'max',
+        # },
+        # ("hivprot", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', "sencoder_layer": 'max',
+        # },
+        # ("dpp4", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', "sencoder_layer": 'max',
+        # },
+        # ("dpp4", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', "sencoder_layer": 'max',
+        # },
+        # ("nk1", "count", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', "sencoder_layer": 'max',
+        # },
+        # ("nk1", "bit", "dsets"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'dsets', "sencoder_layer": 'max',
+        # },
+        
+        # ("hivprot", "count", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'max'
+        # },
+        # ("hivprot", "bit", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'max',
+        # },
+        # ("dpp4", "count", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'max',
+        # },
+        # ("dpp4", "bit", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'max'
+        # },
+        # ("nk1", "count", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+        #     'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'max',
+        # },
+        # ("nk1", "bit", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'max',
+        # },
+
+
+        # MIXUP lr=0.01, num_layer=3, hidden_dim=64
         ("hivprot", "count", "dsets"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'# , "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("hivprot", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'# , "sencoder_layer": 'max',
-        },
-        ("dpp4", "count", "dsets"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'# , "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
+        },
+        ("dpp4", "count", "dsets"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("dpp4", "bit", "dsets"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-            'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'# , "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("nk1", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'# , "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
         ("nk1", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets'# , "sencoder_layer": 'max',
+            'sencoder': 'dsets', "sencoder_layer": 'max',
         },
+
+        # MANIFOLD_MIXUP lr=0.01, num_layer=3, hidden_dim=64
         ("hivprot", "count", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-            'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'# , "sencoder_layer": 'max',
-        },
-        ("hivprot", "bit", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-            'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'pma',
-        },
-        ("dpp4", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'pma',
+            'sencoder': 'strans', "sencoder_layer": 'max'
+        },
+        ("hivprot", "bit", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max',
+        },
+        ("dpp4", "count", "strans"): {
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
+            'inner_episodes': 10, 'outer_episodes': 50,
+            'sencoder': 'strans', "sencoder_layer": 'max',
         },
         ("dpp4", "bit", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-            'hidden_dim': 32, 'n_context': 4, 'dropout': 0.5,
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'sum',
+            'sencoder': 'strans', "sencoder_layer": 'max'
         },
         ("nk1", "count", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-            'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
+            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'sum',
+            'sencoder': 'strans', "sencoder_layer": 'max',
         },
         ("nk1", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
+            'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans'#, "sencoder_layer": 'sum',
+            'sencoder': 'strans', "sencoder_layer": 'max',
         },
     }
 
@@ -1331,12 +1468,11 @@ if __name__ == '__main__':
 
     print(f"running {args.dataset=} {args.vec_type=} with params: {hyperparams}")
 
-    print('SEED ', args.seed)
-    print('SEED ', args.seed >=0)
     if args.seed >= 0:
         set_seed(0)
         if os.environ.get('SAVE_TSNE_MODEL', '0') == '1' and args.seed != 42:
             args.seed = 0 # NOTE JIN using args.seed
+    # args.seed = 0 # NOTE JIN using args.seed
     trainloader, validloader, mvalidloader, testloader, contextloader, ood1_trainloader, ood2_trainloader = get_dataset(args=args, test=True)
 
     for i in range(10):
@@ -1415,7 +1551,7 @@ if __name__ == '__main__':
                         _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
                 else:
                     if os.environ.get('MIX_TYPE', 'SET') == 'SET':
-                        with open(f"./experiments/S-results-{args.sencoder}-{args.sencoder_layer}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_real.txt", "a+") as _f:
+                        with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_real.txt", "a+") as _f:
                             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix')}_test\n")
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

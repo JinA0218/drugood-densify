@@ -58,7 +58,13 @@ def sort_and_save_blocks(input_path):
 
 # List of input files to process
 input_files = [
-    '/c2/jinakim/Drug_Discovery_j/experiments/S-results-strans_mvalid-all-3real-ml0-xmix-mvdef1-mNctFalse-RYV1_real.txt'
+    '/c2/jinakim/Drug_Discovery_j/experiments/S-results-dsets_mvalid-all-3real-ml0-xmix-mvdefMANIFOLD_MIXUP_BILEVEL4-mNctFalse-RYV1_MANIFOLD_MIXUP_BILEVEL_real_3.txt',
+    '/c2/jinakim/Drug_Discovery_j/experiments/S-results-dsets_mvalid-all-3real-ml0-xmix-mvdefMIXUP_BILEVEL4-mNctFalse-RYV1_MIXUP_BILEVEL_real_3.txt',
+    '/c2/jinakim/Drug_Discovery_j/experiments/S-results-strans_mvalid-all-3real-ml0-xmix-mvdefMANIFOLD_MIXUP_BILEVEL4-mNctFalse-RYV1_MANIFOLD_MIXUP_BILEVEL_real_3.txt',
+    '/c2/jinakim/Drug_Discovery_j/experiments/S-results-strans_mvalid-all-3real-ml0-xmix-mvdefMIXUP_BILEVEL4-mNctFalse-RYV1_MIXUP_BILEVEL_real_3.txt'
+    # '/c2/jinakim/Drug_Discovery_j/experiments/S-results-dsets_mvalid-all-3real-ml0-xmix-mvdefMANIFOLD_MIXUP_BILEVEL4-mNctFalse-RYV1_MANIFOLD_MIXUP_BILEVEL_real_3.txt',
+    # '/c2/jinakim/Drug_Discovery_j/experiments/S-results-strans_mvalid-all-3real-ml0-xmix-mvdefMIXUP_BILEVEL4-mNctFalse-RYV1_MIXUP_BILEVEL_real_3.txt'
+    # '/c2/jinakim/Drug_Discovery_j/experiments/S-results-strans_mvalid-all-3real-ml0-xmix-mvdef1-mNctFalse-RYV1_real.txt'
     # "/c2/jinakim/Drug_Discovery_j/experiments/S-results-dsets_mvalid-all-3real-ml0-xmix-mvdef1-mNctFalse-RYV1_real.txt",
     # "/c2/jinakim/Drug_Discovery_j/experiments/S-results-dsets_mvalid-exclude-all-3real.txt",
     # "/c2/jinakim/Drug_Discovery_j/experiments/S-results-strans_mvalid-all-3real.txt",

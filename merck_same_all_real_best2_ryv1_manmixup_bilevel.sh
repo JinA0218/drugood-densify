@@ -1,15 +1,42 @@
 # #!/bin/bash
 mkdir -p logs
 
+declare -A validation_lists
+# # validation_lists["dsets_hivprot_count"]="3a4 metab" # oh actually ['3a4', 'metab']
+# # validation_lists["dsets_hivprot_bit"]="metab pgp"
+# # validation_lists["dsets_dpp4_count"]="hivint rat_f"
+# # validation_lists["dsets_dpp4_bit"]="ox1 ppb"
+# # validation_lists["dsets_nk1_count"]="3a4 metab"
+# validation_lists["dsets_nk1_bit"]="pgp thrombin"
+
+# # validation_lists["strans_hivprot_count"]="3a4 ox1"
+# # validation_lists["strans_hivprot_bit"]="hivint pgp"
+# # validation_lists["strans_dpp4_count"]="3a4 ox1"
+# # validation_lists["strans_dpp4_bit"]="logd ox1"
+# # validation_lists["strans_nk1_count"]="logd ox2"
+# # validation_lists["strans_nk1_bit"]="3a4 hivint"
+
+# validation_lists["dsets_hivprot_count"]="ppb tdi" # oh actually ['3a4', 'metab']
+# validation_lists["dsets_hivprot_bit"]="cb1 ppb"
+# validation_lists["dsets_dpp4_count"]="tdi thrombin"
+# validation_lists["dsets_nk1_count"]="thrombin metab"
+# validation_lists["strans_dpp4_bit"]="ox1 rat_f"
+validation_lists["strans_nk1_bit"]="ox1 thrombin"
+
 targets=('nk1') #    'dpp4' 'nk1'
 sencoders=('strans') #    'strans'
 mixing_layers=(0)  #  1 2
 
 
-gpus=(1 2)
+gpus=(1)
 gpu_count=${#gpus[@]}
 max_jobs_per_gpu=6
 job_id=0
+
+
+
+# 1. ablation of concating x again after mixing
+# 2. change mixing location
 
 # embed_tests=('2nd_last_ours_best') #  'setenc_ours_best' lastlayer_ours_best
 # embed_tests=('lastlayer_ours_best' 'lastlayer_base_cX_mO' 'setenc_ours_best' 'setenc_base_cX_mO' 'lastlayer_base_cX_mX')
@@ -17,15 +44,19 @@ job_id=0
 active_pids=()
 
 for ds in "${targets[@]}"; do
-    for vt in bit; do #  bit
+    for vt in bit; do #  count bit
         for sencoder in "${sencoders[@]}"; do
-            # for sl in mean max sum; do
+            key="${sencoder}_${ds}_${vt}"
+            value="${validation_lists[$key]}"
+            read -r md1 md2 <<< "$value"
+            
             for ml in "${mixing_layers[@]}"; do
+
                 gpu_id=${gpus[$((job_id % gpu_count))]}
 
                 echo "Launching job $job_id on GPU $gpu_id | ds=$ds | md=($md1,$md2) | vt=$vt | sencoder=$sencoder | mixing_layer=$ml"
                 mix_default_type="xmix"
-                MIXUP_EPOCHS=10 MIX_TYPE=MIXUP RANDOM_YV=1 SAVE_TSNE_MODEL=1 MVALID_DEFAULT=MIXUP_NO_BILEVEL_REAL3 MIXING_X_DEFAULT=$mix_default_type CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real_mixup.py \
+                MIXUP_EPOCHS=10 MIX_TYPE=MANIFOLD_MIXUP_BILEVEL RANDOM_YV=1 SAVE_TSNE_MODEL=1 MVALID_DEFAULT=MANIFOLD_MIXUP_BILEVEL2 MIXING_X_DEFAULT=$mix_default_type CUDA_VISIBLE_DEVICES=$gpu_id PYTHONPATH=. python main_merck_all_real_mixup.py \
                     --sencoder "$sencoder" \
                     --model mlp \
                     --optimizer adamwschedulefree \
@@ -49,11 +80,11 @@ for ds in "${targets[@]}"; do
                     --vec_type "$vt" \
                     --dataset "$ds" \
                     --same_setting \
-                    --mvalid_dataset None \
+                    --mvalid_dataset "$md1" "$md2" \
                     --mixer_phi True \
                     --sencoder_layer max \
                     --mixing_layer "$ml" 
-                    > logs/job_${job_id}_ds_${ds}_md_${md1}_${md2}_vt_${vt}_se_${sencoder}_mt_${mix_default_type}_ml_${ml// /_}_mixup_final_NO_BUG.log 2>&1 &
+                    > logs/job_${job_id}_ds_${ds}_md_${md1}_${md2}_vt_${vt}_se_${sencoder}_mt_${mix_default_type}_ml_${ml// /_}_no_seed.log 2>&1 &
 
                 ((job_id++))
 
@@ -64,7 +95,6 @@ for ds in "${targets[@]}"; do
                 if (( job_id % (gpu_count * 3) == 0 )); then
                     wait
                 fi
-                # done
             done
         done
     done

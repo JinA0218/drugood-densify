@@ -247,14 +247,15 @@ class ContextMixer(nn.Module):
         self.dec = nn.Linear(dim_proj, dim_in)
         print(self.se_theta)
 
-    def mixup_with_context(x, context, sencoder_layer):
+    def mixup_with_context(self, x=None, context=None, sencoder_layer=None, embed_type=None, ):
         """
         Mix each (B, H) input with its own (B, S, H) context.
         Returns: mixed_x of shape (B, H)
         """
-        raise Exception()
         B, S, H = context.shape
-        x = x.unsqueeze(1)  # (B, 1, H)
+        
+        if not (embed_type != None and embed_type == "context_none"):
+            x = x.unsqueeze(1)  # (B, 1, H)
 
         # Uniformly sample lambda in [0, 1] per sample
         lam = torch.rand((B, 1, 1), device=x.device)  # (B, 1, 1)
@@ -274,22 +275,56 @@ class ContextMixer(nn.Module):
     
     def forward(self, x_real, x_context=None, embedding_list=None, label_list=None, embed_type=None, embed_test=None):
         if embed_type != None and embed_type == "context_none": # TODO BE CAREFUL
-            if os.environ.get('MIX_TYPE', 'SET') == 'MIXUP' or os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP':
+            if os.environ.get('MIX_TYPE', 'SET') in ['SET', 'SET_NO_BILEVEL'] or os.environ.get('MIX_TYPE', 'SET') in ['MANIFOLD_MIXUP', 'MANIFOLD_MIXUP_BILEVEL']:
+                # print("SHOULD NOT ENCOUNTER DURING TRAINING !!!!!!")
+                c_theta_1_x = self.c_theta_1(x_real)
+                c_theta_1_c = self.c_theta_1(x_context)
+                
+                if os.environ.get('MIX_TYPE', 'SET') in ['SET', 'SET_NO_BILEVEL']:
+                    x_rc = self.se_theta(torch.cat([c_theta_1_x, c_theta_1_c], dim=1)).squeeze(1)
+                else:
+                    # print('c_theta_1_x ', c_theta_1_x.shape)
+                    # print('c_theta_1_x ', c_theta_1_x.squeeze(1).shape)
+                    x_rc = self.mixup_with_context(x=c_theta_1_x, context=c_theta_1_c, sencoder_layer=self.sencoder_layer, embed_type=embed_type)
+            elif os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MIXUP_BILEVEL']:
+                # print('x_real ', x_real.shape)
+                # print('x_context ', x_context.shape)
+                x_rc = self.mixup_with_context(x=x_real, context=x_context, sencoder_layer=self.sencoder_layer, embed_type=embed_type)
+                # print('x_rc ', x_rc.shape)
+                return x_rc, embedding_list, label_list
+            else:
                 raise Exception()
-            # print("SHOULD NOT ENCOUNTER DURING TRAINING !!!!!!")
-            c_theta_1_x = self.c_theta_1(x_real)
-            c_theta_1_c = self.c_theta_1(x_context)
-            x_rc = self.se_theta(torch.cat([c_theta_1_x, c_theta_1_c], dim=1)).squeeze(1)
             
         else:
-            if os.environ.get('MIX_TYPE', 'SET') == 'MIXUP':
-                raise Exception()
-                x_rc = self.mixup_with_context(r_theta_1, c_theta_1, sencoder_layer=self.sencoder_layer)
+            if os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MIXUP_BILEVEL']:
+                x_rc = self.mixup_with_context(x=x_real, context=x_context, sencoder_layer=self.sencoder_layer)
+                
+                # print('###### x_rc ', x_rc.shape)
+                if embed_type != None and "setenc" in embed_test:
+                    embedding_list.append(x_rc.detach().cpu())
+                    if embed_type == "train_context":
+                        label_list.append(torch.full((x_rc.shape[0],), 0))
+                    elif embed_type == "context_none":
+                        label_list.append(torch.full((x_rc.shape[0],), -1))
+                    elif embed_type == "train_none":
+                        label_list.append(torch.full((x_rc.shape[0],), 1))
+                    elif embed_type == "mvalid_none":
+                        label_list.append(torch.full((x_rc.shape[0],), 2))
+
+                    elif embed_type == "ood1_none":
+                        label_list.append(torch.full((x_rc.shape[0],), 3))
+
+                    elif embed_type == "ood2_none":
+                        label_list.append(torch.full((x_rc.shape[0],), 4))
+                    else:
+                        raise Exception()
+                
+                return x_rc, embedding_list, label_list
             else:
                 r_theta_1 = self.r_theta_1(x_real)
                 c_theta_1 = self.c_theta_1(x_context if x_context is not None else x_real.unsqueeze(1))
 
-                if os.environ.get('MIX_TYPE', 'SET') == 'SET':
+                if os.environ.get('MIX_TYPE', 'SET') in ['SET', 'SET_NO_BILEVEL']:
                     if os.environ.get("MIXING_X_DEFAULT", "xmix") == "mix_x": # also consider context_none
                         raise Exception()
                         x_rc = self.se_theta(c_theta_1).squeeze(1)
@@ -301,9 +336,10 @@ class ContextMixer(nn.Module):
                     else:
                         x_rc = self.se_theta(torch.cat([r_theta_1.unsqueeze(1), c_theta_1], dim=1)).squeeze(1)
                     
-                elif os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP':
+                elif os.environ.get('MIX_TYPE', 'SET') in ['MANIFOLD_MIXUP', 'MANIFOLD_MIXUP_BILEVEL']:
+                    x_rc = self.mixup_with_context(x=r_theta_1, context=c_theta_1, sencoder_layer=self.sencoder_layer)
+                else:
                     raise Exception()
-                    x_rc = self.mixup_with_context(r_theta_1, c_theta_1, sencoder_layer=self.sencoder_layer)
 
         
         # print('###### x_rc ', x_rc.shape)

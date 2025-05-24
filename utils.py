@@ -10,7 +10,7 @@ import math
 import types
 import random
 import numpy as np
-
+import os
 
 #from utils import AdamWScheduleFree, SGDScheduleFree
 
@@ -51,22 +51,39 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def get_optimizer(optimizer, model, lr, wd):
+def get_optimizer(optimizer, model, lr, wd, mixer_phi=None):
     def train(self):
         pass
     def eval(self):
         pass
-    if optimizer == 'adamw':
-        optim = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
-    elif optimizer == 'adamwschedulefree':
-        optim = AdamWScheduleFree(model.parameters(), lr=lr, weight_decay=wd)
-    elif optimizer == 'adam':
-        optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+    
+    if mixer_phi is not None and os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']:
+        params = list(model.parameters()) + list(mixer_phi.parameters())
+        if optimizer == 'adamw':
+            optim = torch.optim.AdamW(params, lr=lr, weight_decay=wd)
+        elif optimizer == 'adamwschedulefree':
+            optim = AdamWScheduleFree(params, lr=lr, weight_decay=wd)
+        elif optimizer == 'adam':
+            optim = torch.optim.Adam(params, lr=lr, weight_decay=wd)
+        else:
+            raise NotImplementedError
+        if 'schedulefree' not in optimizer:
+            optim.train = types.MethodType(train, optim)
+            optim.eval = types.MethodType(eval, optim)
+    
     else:
-        raise NotImplementedError
-    if 'schedulefree' not in optimizer:
-        optim.train = types.MethodType(train, optim)
-        optim.eval = types.MethodType(eval, optim)
+        if optimizer == 'adamw':
+            optim = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
+        elif optimizer == 'adamwschedulefree':
+            optim = AdamWScheduleFree(model.parameters(), lr=lr, weight_decay=wd)
+        elif optimizer == 'adam':
+            optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+        else:
+            raise NotImplementedError
+        if 'schedulefree' not in optimizer:
+            optim.train = types.MethodType(train, optim)
+            optim.eval = types.MethodType(eval, optim)
+        
     return optim
 
 class AdamWScheduleFree(torch.optim.Optimizer):

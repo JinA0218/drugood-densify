@@ -60,13 +60,13 @@ class MLP(nn.Module):
         self.mlp_theta = nn.ModuleList(self.mlp_theta)
         self.head_theta = nn.Linear(in_features=hidden_dim, out_features=num_outputs)
         
-        if os.environ.get("MIXING_X_DEFAULT", "xmix") != "xmix":
-            self.fusion_mlp = torch.nn.Sequential(
-                                torch.nn.Linear(hidden_dim * 2, hidden_dim),
-                                torch.nn.ReLU()
-                            )
-        else:
-            self.fusion_mlp = None
+        # if os.environ.get("MIXING_X_DEFAULT", "xmix") != "xmix":
+        #     self.fusion_mlp = torch.nn.Sequential(
+        #                         torch.nn.Linear(hidden_dim * 2, hidden_dim),
+        #                         torch.nn.ReLU()
+        #                     )
+        # else:
+        #     self.fusion_mlp = None
     
     def forward(self, x, context=None, mixer_phi=None, embedding_list=None, label_list=None, embed_type=None, embed_test=None):
         if context is None:
@@ -79,7 +79,7 @@ class MLP(nn.Module):
             B_X, S_X, H_X = x.shape
             x = x.view(B_X * S_X, H_X)
         
-        if os.environ.get('MIX_TYPE', 'SET') == 'SET':
+        if os.environ.get('MIX_TYPE', 'SET') in ['SET', 'SET_NO_BILEVEL']:
             for i, theta in enumerate(self.mlp_theta):
                 x = theta(x)
                 if i <= self.mixing_layer:
@@ -98,7 +98,7 @@ class MLP(nn.Module):
                         print('#### x_mixed ', x_mixed.shape)
                         print('#### x bef concat', x.shape)
                         fusion_input = torch.cat([x, x_mixed], dim=1)
-                        x = self.fusion_mlp(fusion_input)
+                        # x = self.fusion_mlp(fusion_input)
                         print('#### x aft concat', x.shape)
                         # breakpoint()
                     else:
@@ -126,15 +126,13 @@ class MLP(nn.Module):
             #x_mixed = mixer_phi(x_real=x, x_context=context)
             #y_hat= self.head_theta(x_mixed)
             
-        elif os.environ.get('MIX_TYPE', 'SET') == 'MIXUP' or os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP':
-            raise Exception()
-            # if embed_type != None and "setenc" in embed_test:
-            #     raise Exception()
-            
-            if os.environ.get('MIX_TYPE', 'SET') == 'MIXUP':
+        elif os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MIXUP_BILEVEL', 'MANIFOLD_MIXUP', 'MANIFOLD_MIXUP_BILEVEL']:
+            if os.environ.get('MIX_TYPE', 'SET') in ['MIXUP', 'MIXUP_BILEVEL']:
+                context = context.view(B, S, -1)
+                if embed_type != None and embed_type == "context_none":
+                    x = x.view(B_X, S_X, -1)
                 x, embedding_list, label_list = mixer_phi(x_real=x, x_context=context, embedding_list=embedding_list, label_list=label_list, embed_type=embed_type, embed_test=embed_test)
                 
-                # x, lam = self.mixup_x_with_context(x, context, sencoder_layer, alpha=1.0)
                 for i, theta in enumerate(self.mlp_theta):
                     x = theta(x)
                     # if i <= self.mixing_layer:
@@ -179,7 +177,7 @@ class MLP(nn.Module):
                         else:
                             raise Exception()
                 
-            elif os.environ.get('MIX_TYPE', 'SET') == 'MANIFOLD_MIXUP':
+            elif os.environ.get('MIX_TYPE', 'SET') in ['MANIFOLD_MIXUP', 'MANIFOLD_MIXUP_BILEVEL']:
                 for i, theta in enumerate(self.mlp_theta):
                     x = theta(x)
                     if i <= self.mixing_layer:

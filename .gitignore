@@ -10,3 +10,7 @@ experiments/*
 *.pdf
 *.png
 *.npz
+*.pkl
+*.txt
+*.csv
+*.pt
