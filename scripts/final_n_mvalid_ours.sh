@@ -2,8 +2,8 @@
 
 targets=('hivprot' 'dpp4' 'nk1') # 'hivprot' 'dpp4' 
 sencoders=('dsets' 'strans') #  'strans'
-max_parallel_jobs=3
-gpu_list=(1 2 3 4)   # You can extend this: (0 1 2 3)
+max_parallel_jobs=1
+gpu_list=(4 5 6)   # You can extend this: (0 1 2 3)
 num_gpus=${#gpu_list[@]}
 job_id=0
 
