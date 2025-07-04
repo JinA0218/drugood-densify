@@ -1192,13 +1192,13 @@ class Trainer:
                 torch.save({
                     'model': self.model.state_dict(),
                     'mixer_phi': self.mixer_phi.state_dict(),
-                    'optimizer' : self.optimizer.state_dict(),
-                    'mixer_optimizer' : self.optimizermixer.state_dict(), # used in bilevel but not non_bilevel
-                    'args': vars(args),  # Save args as a dictionary,
-                    'ltmse' : ltmse,
-                    'lvmse' : lvmse,
-                    'vmse' : vmse,
-                    'tmse ': tmse, 
+                    'optimizer': self.optimizer.state_dict(),
+                    'mixer_optimizer': self.optimizermixer.state_dict() if self.optimizermixer is not None else None,
+                    'args': vars(args),
+                    'ltmse': ltmse,
+                    'lvmse': lvmse,
+                    'vmse': vmse,
+                    'tmse': tmse,
                 }, f_path)
             else:
                 f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}_{os.environ.get('MIX_TYPE', 'SET')}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"

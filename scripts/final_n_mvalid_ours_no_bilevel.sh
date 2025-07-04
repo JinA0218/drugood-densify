@@ -1,9 +1,9 @@
 #!/bin/bash
 
-targets=('hivprot' 'dpp4' 'nk1')
-sencoders=('dsets') #  'strans'
+targets=('hivprot' 'dpp4' 'nk1') # 'hivprot' 'dpp4' 
+sencoders=('dsets' 'strans') #  'strans'
 max_parallel_jobs=6
-gpu_list=(0 3 5)   # You can extend this: (0 1 2 3)
+gpu_list=(0 1 2)   # You can extend this: (0 1 2 3)
 num_gpus=${#gpu_list[@]}
 job_id=0
 
@@ -14,12 +14,14 @@ get_sencoder_layer() {
   local encoder=$1
   if [[ "$encoder" == "dsets" ]]; then
     echo "max"
-  # elif [[ "$encoder" == "strans" ]]; then
-  #   echo "sum"
+  elif [[ "$encoder" == "strans" ]]; then
+    echo "sum"
   else
     echo "unknown"
   fi
 }
+
+# N_MVALID_FINAL_4_SENC
 
 # Function to launch a job
 launch_job() {
@@ -38,13 +40,13 @@ launch_job() {
   echo "Launching job $jid on GPU $gpu_id | ds=$ds | vt=$vt | sencoder=$se | sencoder_layer=$sl"
 
   CUDA_VISIBLE_DEVICES=$gpu_id \
-  MIXUP_EPOCHS=10 \
-  MIX_TYPE=MIXUP_BILEVEL \
+  MIXER_NO_BILEVEL_EPOCHS=50 \
+  MIX_TYPE=SET_NO_BILEVEL \
   RANDOM_YV=1 \
-  SAVE_TSNE_MODEL=1 \
-  MVALID_DEFAULT=N_MVALID_MIXUP_BILEVEL_NL3_HD64_re \
+  SAVE_TSNE_MODEL=0 \
+  MVALID_DEFAULT=N_MVALID_NL3_HD64_NO_BILEVEL_REAL \
   PYTHONPATH=. \
-  python main_merck_all_real_mixup_n_context_n_mvalid.py \
+  python main_merck_all_real_nk1_n_context_n_mvalid_no_bilevel.py \
     --sencoder "$se" \
     --sencoder_layer "$sl" \
     --optimizer adamwschedulefree \
@@ -66,15 +68,16 @@ launch_job() {
     --vec_type "$vt" \
     --dataset "$ds" \
     --same_setting \
-    --mvalid_dataset None 
-    > logs/hyper_job_${se}_${sl}_${ds}_${vt}_${jid}.log 2>&1 &
+    --mvalid_dataset None \
+    --num_workers 1 \
+    > logs/hyper_job_${se}_${sl}_${ds}_${vt}_${jid}_no_bilevel.log 2>&1 &
 
   ((job_id++))
 }
 
 # Main loop
 for ds in "${targets[@]}"; do
-  for vt in count bit; do
+  for vt in count bit; do # count
     for se in "${sencoders[@]}"; do
       launch_job "$ds" "$vt" "$se" "$job_id"
 

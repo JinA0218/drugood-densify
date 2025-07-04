@@ -437,20 +437,38 @@ class Trainer:
         self.label_list = []
         self.loss_list = []
 
-    def train(self):
+    def train(self, mvalidloader):
         losses = []
         self.model.train()
         self.optimizer.train()
         
         for x, y in self.trainloader:
             y_hat = self.model(x=x.to(self.args.device))
-            loss = F.mse_loss(y_hat[0].squeeze(), y.to(self.args.device))
-            losses.append(loss.item())
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+            loss_model = F.mse_loss(y_hat[0].squeeze(), y.to(self.args.device))
+
+            x_v, y_v = next(mvalidloader)
+
+            if os.environ.get('RANDOM_YV', '0') =='1':
+                # print('y_v ', y_v.shape)
+                # breakpoint()
+                y_v = torch.randn_like(y_v)
+
+            context_v = None
+            y_v_hat, _, __ = self.model(x=x_v.to(self.args.device), context=context_v, mixer_phi=self.mixer_phi, embedding_list=None, label_list=None, embed_type=None)
+            
+            # y_v_hat = y_v_hat[:, 0]
+            L_V = self.calc_loss(y_v_hat.squeeze(), y_v.to(self.args.device).squeeze(), test=False)  # , weight=self.validloader.dataset.classweights.to(self.args.device))
+            
+            total_loss = loss_model + L_V
+            losses.append(total_loss.item())
+
+            if self.optimizer is not None:
+                self.optimizer.zero_grad()
+                total_loss.backward()
+                
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                self.optimizer.step()
         return np.mean(losses)
-    
 
     def calc_loss(self, y_hat, y, test=False):
         if len(y_hat.size()) > 1:
@@ -994,8 +1012,9 @@ class Trainer:
             best_vmse = float("inf")
             self.best_mse_valid_state_dict_model = deepcopy(self.model.state_dict())
 
+            mvalidloader = InfIterator(self.mvalidloader)
             for epoch in tqdm(range(self.args.epochs), total=self.args.epochs, ncols=75):
-                tloss = self.train()
+                tloss = self.train(mvalidloader)
                 vmse = self.test(dataloader=self.validloader)
                 print('Epoch: {:<3} tloss: {:.3f} vmse: {:.3f}'.format(epoch, tloss, vmse))
                 self.tlosses.append(tloss)
@@ -1074,7 +1093,7 @@ class Trainer:
                 }, f_path)
             
             print(f'saved >> {f_path}')
-            exit()
+            # exit()
         ######
         
         ### for plotting
@@ -1189,7 +1208,7 @@ if __name__ == '__main__':
         # if os.environ.get('RANDOM_YV', '0') == '1':
         #     path = f"experiments_/hyper_search_{args.sencoder}_n_mvalid_real"
         # else:
-        path = f"experiments5/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}"
+        path = f"experiments5/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}_mlp_real2"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -1224,10 +1243,16 @@ if __name__ == '__main__':
                 # print ('args.n_mvalid ', args.n_mvalid)
                 
                 model = get_model(args=args)
-                mixer_phi = get_mixer(args=args)
+                if args.mixer_phi:
+                    mixer_phi = get_mixer(args=args)
+                else:
+                    mixer_phi = None
                 
                 optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd, mixer_phi=mixer_phi)
-                optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
+                
+                assert mixer_phi is None
+                if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
+                    optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
 
                 trainer = Trainer(model=model.to(args.device), \
                                   mixer_phi=mixer_phi if mixer_phi is None else mixer_phi.to(args.device), \
@@ -1243,9 +1268,9 @@ if __name__ == '__main__':
                                   args=args,
                                   )
                 
-                _, _, vmse, _ = trainer.fit()
+                _, _, vmse, tmse = trainer.fit()
                 with open(f_path, "wb") as f:
-                    pickle.dump({"mse": vmse, **hypers}, f)
+                    pickle.dump({"mse": vmse, "tmse":tmse, **hypers}, f)
 
         exit("exiting after hyperparameter sweep")
 
@@ -1376,21 +1401,21 @@ if __name__ == '__main__':
         ### lr == 0.001, 'num_layers': 3, hidden_dim=64
         ("hivprot", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
+            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
         },
         ("hivprot", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
+            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
         },
         ("dpp4", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
+            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
         },
         ("dpp4", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
@@ -1400,15 +1425,15 @@ if __name__ == '__main__':
         },
         ("nk1", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
             'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
         },
         ("nk1", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
+            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
         },
 
 
@@ -1490,46 +1515,46 @@ if __name__ == '__main__':
         #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
         # },
 
-        ### 1. sum tuned (lr=0.01, num_layers=3), hd=64
-        ("hivprot", "count", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50, 
-            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        },
-        ("hivprot", "bit", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        },
-        ("dpp4", "count", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        },
-        ("dpp4", "bit", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        },
-        ("nk1", "count", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        },
-        ("nk1", "bit", "strans"): {
-            'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-            'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-            'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        },
+        # ### 1. sum tuned (lr=0.01, num_layers=3), hd=64
+        # ("hivprot", "count", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50, 
+        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
+        # },
+        # ("hivprot", "bit", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16 # ORIGIN PMA
+        # },
+        # ("dpp4", "count", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
+        # },
+        # ("dpp4", "bit", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
+        # },
+        # ("nk1", "count", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
+        # },
+        # ("nk1", "bit", "strans"): {
+        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
+        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
+        #     'inner_episodes': 10, 'outer_episodes': 50,
+        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
+        # },
 
 
-        # ### 1. max tuned (lr=0.01, num_layers=3), hd=64
+        # # ### 1. max tuned (lr=0.01, num_layers=3), hd=64
         # ("hivprot", "count", "strans"): {
         #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
         #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
@@ -1721,7 +1746,7 @@ if __name__ == '__main__':
         optimizer = get_optimizer(optimizer=args.optimizer, model=model, lr=args.lr, wd=args.wd, mixer_phi=mixer_phi)
         
         optimizermixer = None
-        
+        assert mixer_phi is None
         if os.environ.get('MIX_TYPE', 'SET') not in ['MIXUP', 'MANIFOLD_MIXUP', 'SET_NO_BILEVEL']: # SET, MIXUP_BILEVEL, MANIFOLD_MIXUP_BILEVEL
             optimizermixer = None if mixer_phi is None else get_optimizer(optimizer=args.optimizer, model=mixer_phi, lr=args.clr, wd=args.cwd)
         
@@ -1749,21 +1774,21 @@ if __name__ == '__main__':
     ll = np.array(last_losses)
     print(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}")
     
-    os.makedirs("./experiments", exist_ok=True)
+    os.makedirs("./experiments5", exist_ok=True)
     if not args.same_setting:
-        with open(f"./experiments/results-{args.sencoder}.txt", "a+") as _f:
+        with open(f"./experiments5/results-{args.sencoder}.txt", "a+") as _f:
             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer}\n")
             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
     else:
         if not args.mixer_phi:
-            with open(f"./experiments/results-{args.sencoder}-MLP.txt", "a+") as _f:
+            with open(f"./experiments5/results-{args.sencoder}-MLP_real2.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mixer_phi : {args.mixer_phi}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         elif not args.exclude_mval_data_in_context:
             if args.context_dataset != None:
-                with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-Ncd-{args.low_sim}.txt", "a+") as _f:
+                with open(f"./experiments5/S-results-{args.sencoder}_mvalid-all-3real-Ncd-{args.low_sim}.txt", "a+") as _f:
                     _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} Ncd : {args.context_dataset} sim : {args.low_sim}\n")
                     _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                     _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
@@ -1785,7 +1810,7 @@ if __name__ == '__main__':
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         else:
-            with open(f"./experiments/S-results-{args.sencoder}_mvalid-exclude-all-3real.txt", "a+") as _f:
+            with open(f"./experiments5/S-results-{args.sencoder}_mvalid-exclude-all-3real.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

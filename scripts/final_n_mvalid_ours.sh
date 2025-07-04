@@ -1,9 +1,9 @@
 #!/bin/bash
 
 targets=('hivprot' 'dpp4' 'nk1') # 'hivprot' 'dpp4' 
-sencoders=('strans') #  'strans'
-max_parallel_jobs=6
-gpu_list=(0 1)   # You can extend this: (0 1 2 3)
+sencoders=('dsets' 'strans') #  'strans'
+max_parallel_jobs=3
+gpu_list=(1 2 3 4)   # You can extend this: (0 1 2 3)
 num_gpus=${#gpu_list[@]}
 job_id=0
 
@@ -42,7 +42,7 @@ launch_job() {
   CUDA_VISIBLE_DEVICES=$gpu_id \
   RANDOM_YV=1 \
   SAVE_TSNE_MODEL=0 \
-  MVALID_DEFAULT=N_MVALID_STRANS_NL3_HD64_max \
+  MVALID_DEFAULT=OURS_N_MVALID_NL3_HD64 \
   PYTHONPATH=. \
   python main_merck_all_real_nk1_n_context_n_mvalid.py \
     --sencoder "$se" \
@@ -66,7 +66,7 @@ launch_job() {
     --vec_type "$vt" \
     --dataset "$ds" \
     --same_setting \
-    --mvalid_dataset None \
+    --mvalid_dataset None 
     > logs/hyper_job_${se}_${sl}_${ds}_${vt}_${jid}.log 2>&1 &
 
   ((job_id++))
