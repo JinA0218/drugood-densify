@@ -4,12 +4,12 @@ mkdir -p logs
 sencoder="dsets"
 sencoder_layer="max"
 
-total_configs=9
+total_configs=3
 num_jobs=3
 configs_per_job=$((total_configs / num_jobs))
 gpus=(0 1 2)
 job_id=0
-max_parallel_jobs=1  # controls how many jobs run concurrently
+max_parallel_jobs=3  # controls how many jobs run concurrently
 
 for ((i = 0; i < num_jobs; i++)); do
   START=$((i * configs_per_job))
@@ -20,7 +20,7 @@ for ((i = 0; i < num_jobs; i++)); do
 
   CUDA_VISIBLE_DEVICES=$gpu_id \
   MIXUP_EPOCHS=10 \
-  MIX_TYPE=MIXUP_BILEVEL \
+  MIX_TYPE=MIXUP \
   RANDOM_YV=1 \
   SAVE_TSNE_MODEL=0 \
   HYPER_SWEEP=1 \
@@ -28,10 +28,11 @@ for ((i = 0; i < num_jobs; i++)); do
   STOP=$STOP \
   MVALID_DEFAULT=HPO_FINAL_N_MVALID \
   PYTHONPATH=. \
-  python main_merck_all_real_mixup_n_context_n_mvalid.py \
+  python main_merck_all_real_mixup_no_bilevel_n_context_n_mvalid.py \
     --sencoder "$sencoder" \
     --sencoder_layer "$sencoder_layer" \
     --model mlp \
+    --optimizer adamwschedulefree \
     --mixer_phi True \
     --seed 42 \
     --wd 1e-4 \
@@ -48,7 +49,7 @@ for ((i = 0; i < num_jobs; i++)); do
     --num_outputs 1 \
     --same_setting \
     --mvalid_dataset None \
-    > logs/hyper_job_${sencoder}_${sencoder_layer}_${START}_${STOP}_mixup.log 2>&1 &
+    > logs/hyper_job_${sencoder}_${sencoder_layer}_${START}_${STOP}_mixup_no_bilev.log 2>&1 &
 
   ((job_id++))
 
