@@ -13,8 +13,8 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 
-from models import get_model
-from setenc import get_mixer
+from model.models import get_model
+from model.setenc import get_mixer
 from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
 

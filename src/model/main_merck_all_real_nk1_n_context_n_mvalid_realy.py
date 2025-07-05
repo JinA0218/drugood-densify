@@ -10,10 +10,10 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
 import pickle
-from setenc import get_mixer
+from model.setenc import get_mixer
 from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
-from main_origin import get_model
+from model.main_origin import get_model
 
 # exclude_three = ['3a4', 'cb1', 'hivint', 'logd', 'metab', 'ox1', 'ox2', 'pgp', 'ppb', 'rat_f', 'tdi', 'thrombin']
 exclude_three = ['dpp4', 'hivprot', 'nk1']
