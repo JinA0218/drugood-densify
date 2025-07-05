@@ -1189,7 +1189,7 @@ if __name__ == '__main__':
         # if os.environ.get('RANDOM_YV', '0') == '1':
         #     path = f"experiments_/hyper_search_{args.sencoder}_n_mvalid_real"
         # else:
-        path = f"experiments5/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}"
+        path = f"experiments6/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -1253,126 +1253,6 @@ if __name__ == '__main__':
     last_losses = []
 
     best_hypers = {
-        # all tuned
-        # ("hivprot", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("hivprot", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("dpp4", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("dpp4", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("nk1", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("nk1", "bit", "dsets"): {
-        #     'lr': 0.0001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # # ("nk1", "bit", "dsets"): {
-        # #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        # #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        # #     'inner_episodes': 10, 'outer_episodes': 50,
-        # #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
-        # # },
-
-        # ### lr == 0.001
-        # ("hivprot", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("hivprot", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("dpp4", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("dpp4", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("nk1", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("nk1", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-
-        ### lr == 0.001, 'num_layers': 3
-        # ("hivprot", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
-        # },
-        # ("hivprot", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("dpp4", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("dpp4", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-        # ("nk1", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
-        # },
-        # ("nk1", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 16
-        # },
-
         ### lr == 0.001, 'num_layers': 3, hidden_dim=64
         ("hivprot", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
@@ -1384,13 +1264,13 @@ if __name__ == '__main__':
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
+            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
         },
         ("dpp4", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
+            'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 1
         },
         ("dpp4", "bit", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
@@ -1411,280 +1291,47 @@ if __name__ == '__main__':
             'sencoder': 'dsets', "sencoder_layer": 'max', 'n_mvalid': 6
         },
 
-
-
-        # ### 1. sum tuned (lr=0.01)
-        # ("hivprot", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50, 
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("hivprot", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16 # ORIGIN PMA
-        # },
-        # ("dpp4", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        # },
-        # ("dpp4", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        # },
-        # ("nk1", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        # },
-        # ("nk1", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        # },
-
-
-        ### 1. sum tuned (lr=0.01, num_layers=3)
-        # ("hivprot", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50, 
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("hivprot", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1 # ORIGIN PMA
-        # },
-        # ("dpp4", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("dpp4", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        # },
-        # ("nk1", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("nk1", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        # },
-
-        # ### 1. sum tuned (lr=0.01, num_layers=3), hd=64
-        # ("hivprot", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50, 
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("hivprot", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16 # ORIGIN PMA
-        # },
-        # ("dpp4", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("dpp4", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        # },
-        # ("nk1", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        # },
-        # ("nk1", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-
-
         # ### 1. max tuned (lr=0.01, num_layers=3), hd=64
         ("hivprot", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50, 
-            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 16
+            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
         },
         ("hivprot", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 1, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1 # ORIGIN PMA
+            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
         },
         ("dpp4", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 16
+            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
         },
         ("dpp4", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
+            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 1
         },
         ("nk1", "count", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 16
+            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
         },
         ("nk1", "bit", "strans"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
             'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
             'inner_episodes': 10, 'outer_episodes': 50,
-            'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 16
+            'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
         },
 
-
-        ### 1. sum tuned
-        # ("hivprot", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50, 
-        #     'sencoder': 'strans', "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("hivprot", "bit", "strans"): {
-        #     'lr': 0.0001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'pma', 'n_mvalid': 1 # ORIGIN PMA
-        # },
-        # ("dpp4", "count", "strans"): { ***
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'pma', 'n_mvalid': 16
-        # },
-        # ("dpp4", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 6
-        # },
-        # ("nk1", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        # },
-        # ("nk1", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 32, 'optimizer': 'adamwschedulefree', 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', "sencoder_layer": 'sum', 'n_mvalid': 16
-        # },
-        
-        
+        # TODO FINAL START HERE - above should be sum???
     }
     
-    
-    # best_hypers = {
-    #     ("hivprot", "count", "dsets"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'dsets', "sencoder_layer": 'max',
-    #     },
-    #     ("hivprot", "bit", "dsets"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-    #         'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'dsets', "sencoder_layer": 'max',
-    #     },
-    #     ("dpp4", "count", "dsets"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'dsets', "sencoder_layer": 'max',
-    #     },
-    #     ("dpp4", "bit", "dsets"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'dsets', "sencoder_layer": 'max',
-    #     },
-    #     ("nk1", "count", "dsets"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-    #         'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'dsets', "sencoder_layer": 'max',
-    #     },
-    #     ("nk1", "bit", "dsets"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-    #         'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'dsets', "sencoder_layer": 'max',
-    #     },
-    #     ("hivprot", "count", "strans"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'strans', "sencoder_layer": 'max',
-    #     },
-    #     ("hivprot", "bit", "strans"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'strans', "sencoder_layer": 'pma',
-    #     },
-    #     ("dpp4", "count", "strans"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-    #         'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'strans', "sencoder_layer": 'pma',
-    #     },
-    #     ("dpp4", "bit", "strans"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 32, 'n_context': 4, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'strans', "sencoder_layer": 'sum',
-    #     },
-    #     ("nk1", "count", "strans"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-    #         'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'strans', "sencoder_layer": 'sum',
-    #     },
-    #     ("nk1", "bit", "strans"): {
-    #         'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-    #         'hidden_dim': 32, 'n_context': 8, 'dropout': 0.5,
-    #         'inner_episodes': 10, 'outer_episodes': 50,
-    #         'sencoder': 'strans', "sencoder_layer": 'sum',
-    #     },
-    # }
-
     hyperparams = best_hypers[(args.dataset, args.vec_type, args.sencoder)]
     for k, v in hyperparams.items():
         setattr(args, k, v)
@@ -1751,41 +1398,41 @@ if __name__ == '__main__':
     
     os.makedirs("./experiments", exist_ok=True)
     if not args.same_setting:
-        with open(f"./experiments5/results-{args.sencoder}.txt", "a+") as _f:
+        with open(f"./experiments6/results-{args.sencoder}.txt", "a+") as _f:
             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer}\n")
             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
     else:
         if not args.mixer_phi:
-            with open(f"./experiments5/results-{args.sencoder}-MLP.txt", "a+") as _f:
+            with open(f"./experiments6/results-{args.sencoder}-MLP.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mixer_phi : {args.mixer_phi}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         elif not args.exclude_mval_data_in_context:
             if args.context_dataset != None:
-                with open(f"./experiments5/S-results-{args.sencoder}_mvalid-all-3real-Ncd-{args.low_sim}.txt", "a+") as _f:
+                with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-Ncd-{args.low_sim}.txt", "a+") as _f:
                     _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} Ncd : {args.context_dataset} sim : {args.low_sim}\n")
                     _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                     _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
             else:
                 if os.environ.get('RANDOM_YV', '0') == '0':
-                    with open(f"./experiments5/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}.txt", "a+") as _f:
+                    with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}.txt", "a+") as _f:
                         _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix')}_test\n")
                         _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                         _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
                 else:
                     if os.environ.get('MIX_TYPE', 'SET') == 'SET':
-                        with open(f"./experiments5/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_afthpo.txt", "a+") as _f:
+                        with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_afthpo.txt", "a+") as _f:
                             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix')}_test\n")
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
                     else:
-                        with open(f"./experiments5/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_{os.environ.get('MIX_TYPE', 'SET')}_real_3.txt", "a+") as _f:
+                        with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_{os.environ.get('MIX_TYPE', 'SET')}_real_3.txt", "a+") as _f:
                             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix') } MIX_TYPE : {os.environ.get('MIX_TYPE', 'SET')}\n")
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         else:
-            with open(f"./experiments5/S-results-{args.sencoder}_mvalid-exclude-all-3real.txt", "a+") as _f:
+            with open(f"./experiments6/S-results-{args.sencoder}_mvalid-exclude-all-3real.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

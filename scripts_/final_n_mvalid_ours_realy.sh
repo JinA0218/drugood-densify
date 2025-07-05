@@ -1,9 +1,9 @@
 #!/bin/bash
 
 targets=('hivprot' 'dpp4' 'nk1') # 'hivprot' 'dpp4' 
-sencoders=('dsets' 'strans') #  'strans'
-max_parallel_jobs=6
-gpu_list=(2 3 4)   # You can extend this: (0 1 2 3)
+sencoders=('dsets' 'strans') #  'dsets'
+max_parallel_jobs=3
+gpu_list=(1 6)   # You can extend this: (0 1 2 3)
 num_gpus=${#gpu_list[@]}
 job_id=0
 
@@ -42,7 +42,7 @@ launch_job() {
   CUDA_VISIBLE_DEVICES=$gpu_id \
   RANDOM_YV=0 \
   SAVE_TSNE_MODEL=0 \
-  MVALID_DEFAULT=N_MVALID_OURS_REALY_NL3_HD64 \
+  MVALID_DEFAULT=N_MVALID_OURS_REALY_NL3_HD64_camera \
   PYTHONPATH=. \
   python main_merck_all_real_nk1_n_context_n_mvalid_realy.py \
     --sencoder "$se" \

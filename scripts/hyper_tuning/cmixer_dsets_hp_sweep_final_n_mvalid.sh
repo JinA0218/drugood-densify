@@ -1,15 +1,12 @@
 #!/bin/bash
 
-### with multiprocessing
-
-
 mkdir -p logs
 
 sencoder="dsets"
 sencoder_layer="max"
 
-total_configs=48
-num_jobs=6
+total_configs=9
+num_jobs=3
 configs_per_job=$((total_configs / num_jobs))
 gpus=(3 4 5)
 job_id=0
@@ -30,7 +27,7 @@ for ((i = 0; i < num_jobs; i++)); do
   STOP=$STOP \
   MVALID_DEFAULT=HPO_FINAL_N_MVALID \
   PYTHONPATH=. \
-  python main_merck_all_real_nk1_n_context_n_mvalid_setenc_rest_final.py \
+  python main_merck_all_real_nk1_n_context_n_mvalid.py \
     --sencoder "$sencoder" \
     --sencoder_layer "$sencoder_layer" \
     --model mlp \

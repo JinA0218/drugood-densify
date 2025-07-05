@@ -7,7 +7,7 @@ mkdir -p logs
 total_configs=9
 num_jobs=3
 configs_per_job=$((total_configs / num_jobs))
-gpus=(3 4 5)
+gpus=(1 6)
 max_parallel_jobs=3
 job_id=0
 

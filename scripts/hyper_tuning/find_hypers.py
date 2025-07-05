@@ -2,7 +2,7 @@ import os
 import pickle
 import re
 
-EXPERIMENT_VERSION = "table2_row3"  # NOTE Change this to switch experiment type
+EXPERIMENT_VERSION = "table2_row5"  # NOTE Change this to switch experiment type
 
 EXPERIMENT_PATHS = {
     # <Table 1>
@@ -14,7 +14,8 @@ EXPERIMENT_PATHS = {
     # <Table 2>
     "table2_row1_2": "experiments5/hyper_search_{model}_n_mvalid_real_ryv1_no_bilevel/",
     "table2_row3": "experiments5/hyper_search_{model}_n_mvalid_real_ryv1_mlp_real2/",
-    "table2_row4_5": "experiments5/hyper_search_{model}_n_mvalid_real_ryv0/",
+    "table2_row4": "experiments6/hyper_search_dsets_n_mvalid_real_ryv0/",
+    "table2_row5": "experiments6/hyper_search_strans_n_mvalid_real_ryv0/",
 }
 
 DATASETS = ["hivprot", "dpp4", "nk1"]
@@ -56,7 +57,7 @@ def find_best_metrics(dir_path, filtered_files, filters):
 
 def run_table_rows():
     d_template = EXPERIMENT_PATHS[EXPERIMENT_VERSION]
-    for model in MODELS:
+    for model in MODELS: # TODO FINAL CHANGE
         d = d_template.format(model=model)
         print("=" * 20 + f"{EXPERIMENT_VERSION}" + "=" * 20)
         files = os.listdir(d)
@@ -81,8 +82,6 @@ def run_ours_models():
         print("=" * 20 + f"OURS {model}" + "=" * 20)
         files = os.listdir(d)
 
-        # Set sencoder_layer filter dynamically
-        sencoder_val = "max" if model == "dsets" else "sum"
         filters = {
             "lr": 0.001,
             "num_layers": 3,
