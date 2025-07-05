@@ -1388,84 +1388,6 @@ if __name__ == '__main__':
     
     # TODO need to fill in
     best_hypers = {
-
-        # ### ALL MIXUP BILEVEL
-        # ("hivprot", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 16 # , "sencoder_layer": 'max',
-        # },
-        # ("hivprot", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
-        # },
-        # ("dpp4", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 16 # , "sencoder_layer": 'max',
-        # },
-        # ("dpp4", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 16# , "sencoder_layer": 'max',
-        # },
-        # ("nk1", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
-        # },
-        # ("nk1", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
-        # },
-
-        ### [original impl.] ALL MIXUP BILEVEL lr=0.01, 'num_layers': 3, 'hidden_dim': 64,
-        # ("hivprot", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
-        # },
-        # ("hivprot", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
-        # },
-        # ("dpp4", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
-        # },
-        # ("dpp4", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1# , "sencoder_layer": 'max',
-        # },
-        # ("nk1", "count", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 1 # , "sencoder_layer": 'max',
-        # },
-        # ("nk1", "bit", "dsets"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'dsets', 'n_mvalid': 6 # , "sencoder_layer": 'max',
-        # },
-
-
         ### [updated impl. stepping w self.optim, loss with L_V] ALL MIXUP BILEVEL lr=0.01, 'num_layers': 3, 'hidden_dim': 64,
          ("hivprot", "count", "dsets"): {
             'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
@@ -1503,46 +1425,6 @@ if __name__ == '__main__':
             'inner_episodes': 10, 'outer_episodes': 50,
             'sencoder': 'dsets', 'n_mvalid': 16 # , "sencoder_layer": 'max',
         },
-
-
-
-        # ### ALL MANIFOLD MIXUP BILEVEL
-        # ("hivprot", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', 'n_mvalid': 6 # , "sencoder_layer": 'max', 'n_mvalid': 6
-        # },
-        # ("hivprot", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 4,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', 'n_mvalid': 1 # , "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("dpp4", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', 'n_mvalid': 1 # , "sencoder_layer": 'max', 'n_mvalid': 1
-        # },
-        # ("dpp4", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 8, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', 'n_mvalid': 1 # , "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("nk1", "count", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 1, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', 'n_mvalid': 1 # "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
-        # ("nk1", "bit", "strans"): {
-        #     'lr': 0.001, 'clr': 1e-05, 'num_layers': 3,
-        #     'hidden_dim': 64, 'n_context': 4, 'dropout': 0.5,
-        #     'inner_episodes': 10, 'outer_episodes': 50,
-        #     'sencoder': 'strans', 'n_mvalid': 1 # , "sencoder_layer": 'sum', 'n_mvalid': 1
-        # },
 
         ### ALL MANIFOLD MIXUP BILEVEL lr=0.01, 'num_layers': 3, 'hidden_dim': 64,
         ("hivprot", "count", "strans"): {

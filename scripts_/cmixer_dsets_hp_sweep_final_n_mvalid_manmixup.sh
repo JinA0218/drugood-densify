@@ -4,8 +4,8 @@ mkdir -p logs
 sencoder="dsets"
 sencoder_layer="max"
 
-total_configs=72
-num_jobs=12
+total_configs=9
+num_jobs=3
 configs_per_job=$((total_configs / num_jobs))
 gpus=(3 4 5)
 job_id=0
