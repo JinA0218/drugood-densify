@@ -854,14 +854,14 @@ class Trainer:
         
         # NOTE SAVE MODEL FOR TSNE
         if os.environ.get('SAVE_TSNE_MODEL', '0') == '1':
-            path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/" # but embed_test should not effect result 
+            path = f"/c2/jinakim/Drug_Discovery_j/tsne_model/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/" # but embed_test should not effect result 
             os.makedirs(path, exist_ok=True)
             
             if args.mixer_phi:
                 if args.seed != 42:
-                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}_{args.seed}.pth"
+                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}_{args.seed}.pth"
                 else:
-                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
+                    f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
                     
                 torch.save({
                     'model': self.model.state_dict(),
@@ -875,7 +875,7 @@ class Trainer:
                     'tmse ': tmse, 
                 }, f_path)
             else:
-                f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
+                f_path = f"/c2/jinakim/Drug_Discovery_j/tsne_model/tsne_model2_mNct{args.model_no_context}_RYV{os.environ.get('RANDOM_YV', '0')}_mix{args.mixer_phi}/{self.args.embed_test}/Model_{args.sencoder}_{args.dataset}_{args.vec_type}_{args.mvalid_dataset}.pth"
                 torch.save({
                     'model': self.model.state_dict(),
                     'optimizer' : self.optimizer.state_dict(),
