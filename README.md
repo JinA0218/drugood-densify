@@ -38,7 +38,7 @@ Our model achieves **up to 65% reduction in mean squared error (MSE)** over stro
 We visualize the learned feature representations using **t-SNE** to qualitatively assess generalization under covariate shift.
 
 - **Ours** produces well-separated clusters for in-distribution, context, and OOD samples, indicating **clear structure** and **robust latent features**.
-- In contrast, **Mixup** and **Manifold Mixup** exhibit overlapping clusters, suggesting degraded OOD discrimination and less effective generalization.
+- In contrast, **Mixup (w/ outlier exposure)** and **Manifold Mixup (w/ bilevel optim.)** exhibit overlapping clusters, suggesting degraded OOD discrimination and less effective generalization.
 
 ## 🧩 Key Contributions
 
