@@ -98,19 +98,19 @@ Scripts for generating t-SNE visualizations are located in `scripts/plot_tsne/`:
 
 - **(a) Ours**: [`test_context_lastlayer_random_y_mNctFalse.ipynb`](scripts/plot_tsne/test_context_lastlayer_random_y_mNctFalse.ipynb)  
 - **(b) Mixup (w/ outlier exposure)**: [`test_context_lastlayer_random_y_mNctFalse_MIXUP_BILEVEL.ipynb`](scripts/plot_tsne/test_context_lastlayer_random_y_mNctFalse_MIXUP_BILEVEL.ipynb)  
-- **(c) Manifold Mixup (w/ bilevel optimization)**: [`test_context_lastlayer_random_y_mNctFalse_MANMIXUP_BILEVEL.ipynb`](scripts/plot_tsne/test_context_lastlayer_random_y_mNctFalse_MANMIXUP_BILEVEL.ipynb)
+- **(c) Manifold Mixup (w/ bilevel optim.)**: [`test_context_lastlayer_random_y_mNctFalse_MANMIXUP_BILEVEL.ipynb`](scripts/plot_tsne/test_context_lastlayer_random_y_mNctFalse_MANMIXUP_BILEVEL.ipynb)
 
 To save the corresponding model checkpoints for visualization, set `SAVE_TSNE_MODEL=1` in the following training scripts:
 
 - **(a) Ours**: `scripts/final_report/final_n_mvalid_ours.sh`  
 - **(b) Mixup (w/ outlier exposure)**: `scripts/final_report/final_n_mvalid_mixup.sh`  
-- **(c) Manifold Mixup (w/ bilevel optimization)**: `scripts/final_report/final_n_mvalid_manmixup.sh`
+- **(c) Manifold Mixup (w/ bilevel optim.)**: `scripts/final_report/final_n_mvalid_manmixup.sh`
 
 Example model checkpoint directories:
 
 - **(a) Ours**: `tsne_model/tsne_model2_mNctFalse_RYV1_mixTrue/`  
 - **(b) Mixup (w/ outlier exposure)**: `tsne_model/tsne_model2_mNctFalse_RYV1_mixTrue_MIXUP_BILEVEL/`  
-- **(c) Manifold Mixup (w/ bilevel optimization)**: `tsne_model/tsne_model2_mNctFalse_RYV1_mixTrue_MANIFOLD_MIXUP_BILEVEL/`
+- **(c) Manifold Mixup (w/ bilevel optim.)**: `tsne_model/tsne_model2_mNctFalse_RYV1_mixTrue_MANIFOLD_MIXUP_BILEVEL/`
 
 
 ## 📚 Citation
