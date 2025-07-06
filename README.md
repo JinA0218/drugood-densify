@@ -50,6 +50,7 @@ We visualize the learned feature representations using **t-SNE** to qualitativel
 
 - **Robust OOD Generalization**: Our method consistently outperforms state-of-the-art baselines on the Merck Molecular Activity Challenge, demonstrating strong resilience under significant covariate shift.
 
+- **Model Interpretability via t-SNE**: We provide qualitative insights into model behavior through t-SNE visualizations, which reveal that our method produces well-separated and structured latent spaces compared to baselines like Mixup and Manifold Mixup.
 
 ## 🔁 How to reproduce
 
