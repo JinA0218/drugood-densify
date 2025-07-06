@@ -10,7 +10,7 @@ This repository inlcudes official implementations for [Robust Molecular Property
 
 ## Overview
 
-![](doc/concept_figure.png)
+![image](doc/concept_figure.png)
 
 We address the challenge of molecular property prediction under covariate shift—a major hurdle in real-world drug discovery. Our method enhances generalization to out-of-distribution (OOD) molecules by densifying scarce labeled data using domain-informed unlabeled data and meta-learning with bilevel optimization.
 
