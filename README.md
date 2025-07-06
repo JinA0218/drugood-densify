@@ -76,7 +76,7 @@ pip install -r requirements.txt
 
 > 🔧 Implementation details for Mixup and Manifold Mixup variants are provided in **Appendix A.1**.  
 > 🔍 Hyperparameter search ranges are defined in the files located under `src/model/`, and the specific values used in our experiments are described in **Appendix A.3**.
-
+> 📊 **Results**: Final test results are saved under `experiments/results/`, and performance logs from hyperparameter tuning are stored in the `experiments/` directory.
 
 ### 3. 🧪 Ablation Study (Table 2)
 
@@ -90,7 +90,7 @@ pip install -r requirements.txt
 
 > 🔧 Implementation details for each ablation study variant are provided in **Appendix A.2**.  
 > 🔍 Hyperparameter search ranges are defined in the files located under `src/model/`, and the specific values used in our experiments can be found in **Appendix A.3**.
-
+> 📊 **Results**: Final test results are saved under `experiments/results/`, and performance logs from hyperparameter tuning are stored in the `experiments/` directory.
 
 ### 4. 📉 t-SNE Visualization
 
