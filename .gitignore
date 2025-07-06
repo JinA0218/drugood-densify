@@ -16,3 +16,5 @@ experiments/*
 tsne_ver1/
 *.pth
 loss_histogram/
+/c2/jinakim/Drug_Discovery_j/experiments_/final/per_dataset/script/print_sorted_result copy.py
+/c2/jinakim/Drug_Discovery_j/experiments_/final/per_dataset/script_
