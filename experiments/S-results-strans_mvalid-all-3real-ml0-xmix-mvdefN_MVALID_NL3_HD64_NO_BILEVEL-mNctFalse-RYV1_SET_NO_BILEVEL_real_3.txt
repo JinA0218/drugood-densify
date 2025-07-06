@@ -1,4 +1,0 @@
-dpp4 bit lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix MIX_TYPE : SET_NO_BILEVEL
-mu: 1.3602566877612274 +- 0.013313085255821887
-last performance mu: 1.3596446267200273 +- 0.013344339433689257
-

@@ -1,4 +1,0 @@
-hivprot bit lr: 0.001 clr: 1e-05 max mv : ['None'] mixing_layer : 0 xmix MIX_TYPE : MANIFOLD_MIXUP_BILEVEL
-mu: 0.6902570100862588 +- 0.05852717727686802
-last performance mu: 0.9591864047655421 +- 0.2573169196828421
-
