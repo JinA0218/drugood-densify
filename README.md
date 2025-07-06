@@ -78,7 +78,7 @@ pip install -r requirements.txt
 | **Manifold Mixup (w/ bilevel)**        | `scripts/hyper_tuning/cmixer_dsets_hp_sweep_final_n_mvalid_manmixup_bilevel.sh`     | `scripts/hyper_tuning/final_n_mvalid_manmixup_bilevel.sh`            |
 
 > 🔧 Implementation details for Mixup and Manifold Mixup variants are provided in **Appendix A.1**.  
-> 🔍 Hyperparameter search ranges are defined in `src/model/`, and the specific values used in our experiments are described in **Appendix A.3**.
+> 🔍 Hyperparameter search ranges are defined in the files located under `src/model/`, and the specific values used in our experiments are described in **Appendix A.3**.
 
 
 ### 3. 🧪 Ablation Study (Table 2)
