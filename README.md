@@ -26,8 +26,6 @@ A widely recognized limitation of molecular prediction models is their reliance 
 
 We benchmark our method on the [Merck Molecular Activity Challenge (Merck)](https://www.kaggle.com/c/MerckActivity/data), which contains 15 datasets exhibiting real-world **covariate shifts** in molecular property prediction. Following [Q-SAVI](https://proceedings.mlr.press/v202/klarner23a/klarner23a.pdf), we focus on the three most challenging targets: **HIVPROT**, **DPP4**, and **NK1**, each evaluated using both **count vector** and **bit vector** molecular encodings.
 
-Our model achieves **up to 65% reduction in mean squared error (MSE)** over strong baselines on the HIVPROT dataset—one of the most difficult OOD generalization settings—highlighting its **robustness to distributional shift**.
-
 > 📌 Detailed implementation notes for Mixup and Manifold Mixup variants are available in **Appendix A.1**.
 
 
