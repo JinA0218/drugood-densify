@@ -41,7 +41,7 @@ launch_job() {
   MIXUP_EPOCHS=10 \
   MIX_TYPE=MIXUP_BILEVEL \
   RANDOM_YV=1 \
-  SAVE_TSNE_MODEL=1 \
+  SAVE_TSNE_MODEL=0 \
   MVALID_DEFAULT=N_MVALID_MIXUP_BILEVEL_NL3_HD64_re \
   PYTHONPATH=. \
   python main_merck_all_real_mixup_n_context_n_mvalid.py \

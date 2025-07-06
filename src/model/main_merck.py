@@ -10,10 +10,10 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
 import pickle
-from model.setenc import get_mixer
+from setenc import get_mixer
 from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
-from model.main_origin import get_model
+from main_origin import get_model
 
 dataset_names = ['3a4', 'cb1', 'dpp4', 'hivint', 'hivprot', 'logd', 'metab', 'nk1', 'ox1', 'ox2', 'pgp', 'ppb', 'rat_f', 'tdi', 'thrombin']
 

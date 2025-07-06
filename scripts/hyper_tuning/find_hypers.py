@@ -12,10 +12,10 @@ EXPERIMENT_PATHS = {
     "table1_row8": "experiments/hyper_search_{model}_MANIFOLD_MIXUP_BILEVEL_n_mvalid_real/",
     
     # <Table 2>
-    "table2_row1_2": "experiments5/hyper_search_{model}_n_mvalid_real_ryv1_no_bilevel/",
-    "table2_row3": "experiments5/hyper_search_{model}_n_mvalid_real_ryv1_mlp_real2/",
-    "table2_row4": "experiments6/hyper_search_dsets_n_mvalid_real_ryv0/",
-    "table2_row5": "experiments6/hyper_search_strans_n_mvalid_real_ryv0/",
+    "table2_row1_2": "experiments/hyper_search_{model}_n_mvalid_real_ryv1_no_bilevel/",
+    "table2_row3": "experiments/hyper_search_{model}_n_mvalid_real_ryv1_mlp_real2/",
+    "table2_row4": "experiments/hyper_search_dsets_n_mvalid_real_ryv0/",
+    "table2_row5": "experiments/hyper_search_strans_n_mvalid_real_ryv0/",
 }
 
 DATASETS = ["hivprot", "dpp4", "nk1"]

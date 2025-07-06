@@ -10,10 +10,10 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
 import pickle
-from model.setenc import get_mixer
+from setenc import get_mixer
 from arguments import get_arguments
 from utils import set_seed, get_optimizer, InfIterator
-from model.main_origin import get_model
+from main_origin import get_model
 
 # exclude_three = ['3a4', 'cb1', 'hivint', 'logd', 'metab', 'ox1', 'ox2', 'pgp', 'ppb', 'rat_f', 'tdi', 'thrombin']
 exclude_three = ['dpp4', 'hivprot', 'nk1']
@@ -1189,7 +1189,7 @@ if __name__ == '__main__':
         # if os.environ.get('RANDOM_YV', '0') == '1':
         #     path = f"experiments_/hyper_search_{args.sencoder}_n_mvalid_real"
         # else:
-        path = f"experiments6/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}"
+        path = f"experiments/hyper_search_{args.sencoder}_n_mvalid_real_ryv{os.environ.get('RANDOM_YV', '0')}"
         os.makedirs(path, exist_ok=True)
         for arg_key in arg_map.keys():
             # for hyper_key in hyper_map.keys():
@@ -1398,41 +1398,41 @@ if __name__ == '__main__':
     
     os.makedirs("./experiments", exist_ok=True)
     if not args.same_setting:
-        with open(f"./experiments6/results-{args.sencoder}.txt", "a+") as _f:
+        with open(f"./experiments/results-{args.sencoder}.txt", "a+") as _f:
             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer}\n")
             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
     else:
         if not args.mixer_phi:
-            with open(f"./experiments6/results-{args.sencoder}-MLP.txt", "a+") as _f:
+            with open(f"./experiments/results-{args.sencoder}-MLP.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mixer_phi : {args.mixer_phi}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         elif not args.exclude_mval_data_in_context:
             if args.context_dataset != None:
-                with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-Ncd-{args.low_sim}.txt", "a+") as _f:
+                with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-Ncd-{args.low_sim}.txt", "a+") as _f:
                     _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} Ncd : {args.context_dataset} sim : {args.low_sim}\n")
                     _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                     _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
             else:
                 if os.environ.get('RANDOM_YV', '0') == '0':
-                    with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}.txt", "a+") as _f:
+                    with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}.txt", "a+") as _f:
                         _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix')}_test\n")
                         _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                         _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
                 else:
                     if os.environ.get('MIX_TYPE', 'SET') == 'SET':
-                        with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_afthpo.txt", "a+") as _f:
+                        with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_afthpo.txt", "a+") as _f:
                             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix')}_test\n")
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
                     else:
-                        with open(f"./experiments6/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_{os.environ.get('MIX_TYPE', 'SET')}_real_3.txt", "a+") as _f:
+                        with open(f"./experiments/S-results-{args.sencoder}_mvalid-all-3real-ml{args.mixing_layer}-{os.environ.get('MIXING_X_DEFAULT', 'xmix')}-mvdef{os.environ.get('MVALID_DEFAULT', '1')}-mNct{args.model_no_context}-RYV{os.environ.get('RANDOM_YV', '0')}_{os.environ.get('MIX_TYPE', 'SET')}_real_3.txt", "a+") as _f:
                             _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset} mixing_layer : {args.mixing_layer} {os.environ.get('MIXING_X_DEFAULT', 'xmix') } MIX_TYPE : {os.environ.get('MIX_TYPE', 'SET')}\n")
                             _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                             _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")
         else:
-            with open(f"./experiments6/S-results-{args.sencoder}_mvalid-exclude-all-3real.txt", "a+") as _f:
+            with open(f"./experiments/S-results-{args.sencoder}_mvalid-exclude-all-3real.txt", "a+") as _f:
                 _f.write(f"{args.dataset} {args.vec_type} lr: {args.lr} clr: {args.clr} {args.sencoder_layer} mv : {args.mvalid_dataset}\n")
                 _f.write(f"mu: {l.mean()} +- {l.std() / np.sqrt(l.shape[0])}\n")
                 _f.write(f"last performance mu: {ll.mean()} +- {ll.std() / np.sqrt(ll.shape[0])}\n\n")

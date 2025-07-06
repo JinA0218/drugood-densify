@@ -2,8 +2,8 @@
 
 targets=('hivprot' 'dpp4' 'nk1') #  'dpp4' 'nk1'
 sencoders=('strans') #  ==manmixup
-max_parallel_jobs=6
-gpu_list=(2 6)   # You can extend this: (0 1 2 3)
+max_parallel_jobs=4
+gpu_list=(2 3 4)   # You can extend this: (0 1 2 3)
 num_gpus=${#gpu_list[@]}
 job_id=0
 
@@ -41,10 +41,10 @@ launch_job() {
   MIXUP_EPOCHS=10 \
   MIX_TYPE=MANIFOLD_MIXUP_BILEVEL \
   RANDOM_YV=1 \
-  SAVE_TSNE_MODEL=1 \
-  MVALID_DEFAULT=N_MVALID_MANIFOLD_MIXUP_BILEVEL_NL3_HD64 \
+  SAVE_TSNE_MODEL=0 \
+  MVALID_DEFAULT=N_MVALID_MANIFOLD_MIXUP_BILEVEL_NL3_HD64_camera \
   PYTHONPATH=. \
-  python main_merck_all_real_mixup_n_context_n_mvalid.py \
+  python src/model/main_merck_all_real_mixup_n_context_n_mvalid.py \
     --sencoder "$se" \
     --sencoder_layer "$sl" \
     --optimizer adamwschedulefree \
@@ -66,7 +66,7 @@ launch_job() {
     --vec_type "$vt" \
     --dataset "$ds" \
     --same_setting \
-    --mvalid_dataset None 
+    --mvalid_dataset None \
     > logs/hyper_job_${se}_${sl}_${ds}_${vt}_${jid}.log 2>&1 &
 
   ((job_id++))
@@ -74,7 +74,7 @@ launch_job() {
 
 # Main loop
 for ds in "${targets[@]}"; do
-  for vt in count bit; do # count
+  for vt in bit count; do # count
     for se in "${sencoders[@]}"; do
       launch_job "$ds" "$vt" "$se" "$job_id"
 

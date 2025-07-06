@@ -17,11 +17,11 @@ if __name__ == "__main__":
     
     # <Table 2>
     # Table 2 row 1, 2
-    # d = f"experiments5/hyper_search_{model}_n_mvalid_real_ryv1_no_bilevel/"
+    # d = f"experiments/hyper_search_{model}_n_mvalid_real_ryv1_no_bilevel/"
     # Table 2 row 3
-    d = f"experiments5/hyper_search_{model}_n_mvalid_real_ryv1_mlp_real2/"
+    d = f"experiments/hyper_search_{model}_n_mvalid_real_ryv1_mlp_real2/"
     # Table 2 row 4, 5
-    # d = f"experiments5/hyper_search_{model}_n_mvalid_real_ryv0/"
+    # d = f"experiments/hyper_search_{model}_n_mvalid_real_ryv0/"
 
     for model in ["dsets"]:
         print("=" * 20 + f"{model}" + "=" * 20)
