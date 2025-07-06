@@ -40,6 +40,8 @@ We visualize the learned feature representations using **t-SNE** to qualitativel
 - **Ours** produces well-separated clusters for in-distribution, context, and OOD samples, indicating **clear structure** and **robust latent features**.
 - In contrast, **Mixup (w/ outlier exposure)** and **Manifold Mixup (w/ bilevel optim.)** exhibit overlapping clusters, suggesting degraded OOD discrimination and less effective generalization.
 
+> 📌 More t-SNE visualizations and further details can be found in **Appendix B**.
+
 ## 🧩 Key Contributions
 
 - **Context-Guided Interpolation**: We introduce a learnable set function (e.g., DeepSets or Set Transformer) that interpolates labeled training data with unlabeled external context points to improve representation quality.
