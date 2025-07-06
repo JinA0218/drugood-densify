@@ -91,8 +91,8 @@ pip install -r requirements.txt
 | **Ours (Deepsets)**, `✓ ctx`, `✓ bilevel`, `real`  | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_realy.sh`          | `scripts/final_report/final_n_mvalid_ours_realy.sh`                               |
 | **Ours (Set Trans.)**, `✓ ctx`, `✓ bilevel`, `real`| `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_realy.sh`          | `scripts/final_report/final_n_mvalid_ours_realy.sh`                               |
 
-> 🔧 Implementation details for Mixup and Manifold Mixup variants are provided in **Appendix A.2**.  
-> 🔍 The hyperparameter tuning ranges are defined under `src/model/`, and specific values used in our experiments can be found in **Appendix A.3**.
+> 🔧 Implementation details for each ablation study variant are provided in **Appendix A.2**.  
+> 🔍 Hyperparameter search ranges are defined in the files located under `src/model/`, and the specific values used in our experiments can be found in **Appendix A.3**.
 
 
 ### 4. 📉 t-SNE Visualization
