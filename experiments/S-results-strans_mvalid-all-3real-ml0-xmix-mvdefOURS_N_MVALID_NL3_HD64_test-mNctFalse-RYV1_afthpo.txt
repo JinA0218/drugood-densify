@@ -1,0 +1,4 @@
+hivprot count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 0.7200678683038968 +- 0.04736888799471037
+last performance mu: 0.40162088063670626 +- 0.009254894678146566
+

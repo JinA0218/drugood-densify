@@ -1,0 +1,12 @@
+dpp4 count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix MIX_TYPE : SET_NO_BILEVEL
+mu: 1.3407498097711206 +- 0.026777587402419454
+last performance mu: 1.3407498097711206 +- 0.026777587402419454
+
+hivprot count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix MIX_TYPE : SET_NO_BILEVEL
+mu: 1.1939344985271567 +- 0.03830443564939053
+last performance mu: 1.1939344985271567 +- 0.03830443564939053
+
+hivprot bit lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix MIX_TYPE : SET_NO_BILEVEL
+mu: 1.007518856472044 +- 0.030101801875955594
+last performance mu: 1.0087886490928595 +- 0.030140537593462004
+

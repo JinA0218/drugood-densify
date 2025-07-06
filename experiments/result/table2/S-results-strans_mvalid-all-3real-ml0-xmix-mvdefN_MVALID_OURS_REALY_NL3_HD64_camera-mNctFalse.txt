@@ -1,0 +1,28 @@
+hivprot count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 0.749475983363479 +- 0.06547399222329196
+last performance mu: 0.4016676923677103 +- 0.02094413789628083
+
+hivprot count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 0.7931448819921979 +- 0.0873571153443428
+last performance mu: 0.41049589875029097 +- 0.026265533675179666
+
+hivprot bit lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 0.4212315863637782 +- 0.013488488857124652
+last performance mu: 0.8110485237258583 +- 0.1116909735642068
+
+dpp4 count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 1.3083762106977057 +- 0.034966994616878376
+last performance mu: 1.123277258190957 +- 0.024469318127093805
+
+dpp4 bit lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 1.0601385969287898 +- 0.02633436009147348
+last performance mu: 0.9754852327041347 +- 0.016333006507138235
+
+nk1 count lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 0.6000277369043816 +- 0.04804955001830962
+last performance mu: 0.4490104317588025 +- 0.021984428405557522
+
+nk1 bit lr: 0.001 clr: 1e-05 sum mv : ['None'] mixing_layer : 0 xmix_test
+mu: 0.3972557119325898 +- 0.015896853545926036
+last performance mu: 0.40123596186178556 +- 0.017404298386220794
+
