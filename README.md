@@ -80,13 +80,13 @@ pip install -r requirements.txt
 
 ### 3. 🧪 Ablation Study (Table 2)
 
-| Model Variant                                | Hyperparameter Tuning Script Path                                                   | Test Result Script Path                                                           |
-|---------------------------------------------|--------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| **Ours (Deepsets)**, <span style="color:green">✓ ctx</span>, <span style="color:red">✗ bilevel</span>, `rand` | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_no_bilevel.sh`    | `scripts/final_report/final_n_mvalid_ours_no_bilevel.sh`                          |
-| **Ours (Set Trans.)**, <span style="color:green">✓ ctx</span>, <span style="color:red">✗ bilevel</span>, `rand` | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_no_bilevel.sh`    | `scripts/final_report/final_n_mvalid_ours_no_bilevel.sh`                          |
-| **Ours (MLP)**, <span style="color:red">✗ ctx</span>, <span style="color:red">✗ bilevel</span>, `rand`       | `scripts/hyper_tuning/cmixer_dsets_hp_sweep_final_n_mvalid_mlp.sh`                   | `scripts/final_report/final_n_mvalid_ours_mlp.sh`                                 |
-| **Ours (Deepsets)**, <span style="color:green">✓ ctx</span>, <span style="color:green">✓ bilevel</span>, `real`  | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_realy.sh`          | `scripts/final_report/final_n_mvalid_ours_realy.sh`                               |
-| **Ours (Set Trans.)**, <span style="color:green">✓ ctx</span>, <span style="color:green">✓ bilevel</span>, `real`| `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_realy.sh`          | `scripts/final_report/final_n_mvalid_ours_realy.sh`                               |
+| Model Variant             | Settings                                 | Hyperparameter Tuning Script Path                                                   | Test Result Script Path                                                           |
+|--------------------------|------------------------------------------|--------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| **Ours (Deepsets)**      | ✅ ctx, ❌ bilevel, 🎲 rand               | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_no_bilevel.sh`    | `scripts/final_report/final_n_mvalid_ours_no_bilevel.sh`                          |
+| **Ours (Set Trans.)**    | ✅ ctx, ❌ bilevel, 🎲 rand               | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_no_bilevel.sh`    | `scripts/final_report/final_n_mvalid_ours_no_bilevel.sh`                          |
+| **Ours (MLP)**           | ❌ ctx, ❌ bilevel, 🎲 rand               | `scripts/hyper_tuning/cmixer_dsets_hp_sweep_final_n_mvalid_mlp.sh`                  | `scripts/final_report/final_n_mvalid_ours_mlp.sh`                                 |
+| **Ours (Deepsets)**      | ✅ ctx, ✅ bilevel, 📈 real              | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_realy.sh`         | `scripts/final_report/final_n_mvalid_ours_realy.sh`                               |
+| **Ours (Set Trans.)**    | ✅ ctx, ✅ bilevel, 📈 real              | `scripts/hyper_tuning/cmixer_dsets_strans_hp_sweep_final_n_mvalid_realy.sh`         | `scripts/final_report/final_n_mvalid_ours_realy.sh`                               |
 
 > 🔧 Implementation details for each ablation study variant are provided in **Appendix A.2**.  
 > 🔍 Hyperparameter search ranges are defined in the files located under `src/model/`, and the specific values used in our experiments can be found in **Appendix A.3**.
