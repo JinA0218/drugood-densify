@@ -27,7 +27,7 @@ To address these issues, we propose a novel **meta-learning-based approach** tha
 
 ![Merck Results](doc/merck_result.png)
 
-We benchmark our method on the [Merck Molecular Activity Challenge](https://www.kaggle.com/c/MerckActivity/data), which contains 15 datasets exhibiting real-world **covariate shifts** in molecular property prediction. Following [Q-SAVI](https://proceedings.mlr.press/v202/klarner23a/klarner23a.pdf), we focus on the three most challenging targets: **HIVPROT**, **DPP4**, and **NK1**, each evaluated using both **count vector** and **bit vector** molecular encodings.
+We benchmark our method on the [Merck Molecular Activity Challenge (Merck)](https://www.kaggle.com/c/MerckActivity/data), which contains 15 datasets exhibiting real-world **covariate shifts** in molecular property prediction. Following [Q-SAVI](https://proceedings.mlr.press/v202/klarner23a/klarner23a.pdf), we focus on the three most challenging targets: **HIVPROT**, **DPP4**, and **NK1**, each evaluated using both **count vector** and **bit vector** molecular encodings.
 
 Our model achieves **up to 65% reduction in mean squared error (MSE)** over strong baselines on the HIVPROT dataset—one of the most difficult OOD generalization settings—highlighting its **robustness to distributional shift**.
 
