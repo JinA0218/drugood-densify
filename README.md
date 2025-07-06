@@ -1,8 +1,7 @@
 # Robust Molecular Property Prediction via Densifying Scarce Labeled Data
 
-Official implementation of [_Robust Molecular Property Prediction via Densifying Scarce Labeled Data_](https://openreview.net/forum?id=UF3Iq9cd3W) [[arXiv]](https://arxiv.org/abs/2506.11877).
+Official implementation of **[_Robust Molecular Property Prediction via Densifying Scarce Labeled Data_](https://openreview.net/forum?id=UF3Iq9cd3W) [[arXiv]](https://arxiv.org/abs/2506.11877)**.
 
-> **[_Robust Molecular Property Prediction via Densifying Scarce Labeled Data_](https://arxiv.org/abs/2506.11877)**  
 > 🏫 [Jina Kim*](https://jina0218.github.io/), 🏫 [Jeffery Willette*](https://jeffwillette.github.io/), 🏫 [Bruno Andreis*](https://andreisbruno.github.io/), 🤖 [Sung Ju Hwang](http://www.sungjuhwang.com/)  
 > *Equal contribution  
 > 🏫 [KAIST](https://www.kaist.ac.kr/en/), 🤖 [DeepAuto.ai](http://deepauto.ai/)  
