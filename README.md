@@ -5,7 +5,7 @@ Official implementation of [_Robust Molecular Property Prediction via Densifying
 > **[_Robust Molecular Property Prediction via Densifying Scarce Labeled Data_](https://arxiv.org/abs/2506.11877)**  
 > 🏫 [Jina Kim*](https://jina0218.github.io/), 🏫 [Jeffery Willette*](https://jeffwillette.github.io/), 🏫 [Bruno Andreis*](https://andreisbruno.github.io/), 🤖 [Sung Ju Hwang](http://www.sungjuhwang.com/)  
 > *Equal contribution  
-> 🏫 KAIST &nbsp;&nbsp;&nbsp;&nbsp; 🤖 [DeepAuto.ai](http://deepauto.ai/)  
+> 🏫 KAIST; 🤖 [DeepAuto.ai](http://deepauto.ai/)  
 > 📍 Accepted at [GenBio @ ICML 2025](https://genbio-workshop.github.io/2025/)
 
 
